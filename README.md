@@ -1,7 +1,7 @@
 [![](https://tokei.rs/b1/github/aegoroff/npma?category=code)](https://github.com/XAMPPRocky/tokei)
 
 # Nginx Proxy Manager access log analyzer
-Nginx Proxy Manager access log analyzer can be used to analyze [grok](https://github.com/aegoroff/grol) tool output that parses 
+Nginx Proxy Manager access log analyzer can be used to analyze [grok](https://github.com/aegoroff/grok) tool output that parses 
 raw Nginx Proxy Manager access log and outputs all found properties of each log entry. These propertes are input for this tool.
 
 # Installation
