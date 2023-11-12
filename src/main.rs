@@ -2,6 +2,7 @@ use clap::{command, ArgMatches, Command};
 use clap_complete::{generate, Shell};
 use color_eyre::eyre::Result;
 use core::hash::Hash;
+use indicatif::HumanBytes;
 use itertools::Itertools;
 use npma::{
     analyze,
@@ -59,22 +60,32 @@ async fn scan_stdin(cmd: &ArgMatches) -> Result<()> {
 }
 
 fn print_analyzed(cmd: &ArgMatches, analyzed: Vec<LogEntry>) {
-    if let Some(("g", cmd)) = cmd.subcommand() {
-        let limit = cmd.get_one::<usize>("top");
-        if let Some(param) = cmd.get_one::<Groupping>("parameter") {
-            match param {
-                Groupping::Time => group_by(*param, limit, &analyzed, |e| e.timestamp.clone()),
-                Groupping::Agent => group_by(*param, limit, &analyzed, |e| e.agent.clone()),
-                Groupping::ClientIp => group_by(*param, limit, &analyzed, |e| e.clientip.clone()),
-                Groupping::Status => group_by(*param, limit, &analyzed, |e| e.status),
-                Groupping::Method => group_by(*param, limit, &analyzed, |e| e.method.clone()),
-                Groupping::Schema => group_by(*param, limit, &analyzed, |e| e.schema.clone()),
-                Groupping::Request => group_by(*param, limit, &analyzed, |e| e.request.clone()),
-                Groupping::Referrer => group_by(*param, limit, &analyzed, |e| e.referrer.clone()),
+    match cmd.subcommand() {
+        Some(("g", cmd)) => {
+            let limit = cmd.get_one::<usize>("top");
+            if let Some(param) = cmd.get_one::<Groupping>("parameter") {
+                match param {
+                    Groupping::Time => group_by(*param, limit, &analyzed, |e| e.timestamp.clone()),
+                    Groupping::Agent => group_by(*param, limit, &analyzed, |e| e.agent.clone()),
+                    Groupping::ClientIp => {
+                        group_by(*param, limit, &analyzed, |e| e.clientip.clone())
+                    }
+                    Groupping::Status => group_by(*param, limit, &analyzed, |e| e.status),
+                    Groupping::Method => group_by(*param, limit, &analyzed, |e| e.method.clone()),
+                    Groupping::Schema => group_by(*param, limit, &analyzed, |e| e.schema.clone()),
+                    Groupping::Request => group_by(*param, limit, &analyzed, |e| e.request.clone()),
+                    Groupping::Referrer => {
+                        group_by(*param, limit, &analyzed, |e| e.referrer.clone())
+                    }
+                }
             }
         }
-    } else {
-        console::print(analyzed.into_iter());
+        Some(("t", _)) => {
+            let total_bytes = analyzed.iter().fold(0, |acc, x| acc + x.length);
+            let total_bytes = HumanBytes(total_bytes);
+            println!("Total traffic: {total_bytes}");
+        }
+        _ => console::print(analyzed.into_iter()),
     }
 }
 
@@ -144,6 +155,7 @@ fn file_cmd() -> Command {
                 .help(INCLUDE_HELP),
         )
         .subcommand(groupping_cmd())
+        .subcommand(traffic_cmd())
 }
 
 fn stdin_cmd() -> Command {
@@ -161,6 +173,7 @@ fn stdin_cmd() -> Command {
                 .help(INCLUDE_HELP),
         )
         .subcommand(groupping_cmd())
+        .subcommand(traffic_cmd())
 }
 
 fn completion_cmd() -> Command {
@@ -190,4 +203,10 @@ fn groupping_cmd() -> Command {
                 .required(true)
                 .index(1),
         )
+}
+
+fn traffic_cmd() -> Command {
+    Command::new("t")
+        .aliases(["traffic"])
+        .about("Sums all log entries length to caclulate all data size passed through proxy")
 }
