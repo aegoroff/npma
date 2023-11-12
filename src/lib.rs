@@ -1,3 +1,4 @@
+use chrono::{DateTime, FixedOffset};
 use clap::builder::PossibleValue;
 use clap::ValueEnum;
 use color_eyre::eyre::{Context, Result};
@@ -30,6 +31,9 @@ pub fn analyze(entries: &[String], filter: &Criteria) -> Vec<LogEntry> {
 
             let request = read_parameter(&strings, "request");
             let timestamp = read_parameter(&strings, "timestamp");
+            let timestamp =
+                DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
+
             let agent = read_parameter(&strings, "agent")
                 .trim_matches('"')
                 .to_string();
@@ -129,7 +133,7 @@ pub struct LogEntry {
     pub schema: String,
     pub serverhost: String,
     pub status: u16,
-    pub timestamp: String,
+    pub timestamp: DateTime<FixedOffset>,
     pub line: u64,
 }
 

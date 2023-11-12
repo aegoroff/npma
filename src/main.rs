@@ -65,7 +65,7 @@ fn print_analyzed(cmd: &ArgMatches, analyzed: Vec<LogEntry>) {
             let limit = cmd.get_one::<usize>("top");
             if let Some(param) = cmd.get_one::<Groupping>("parameter") {
                 match param {
-                    Groupping::Time => group_by(*param, limit, &analyzed, |e| e.timestamp.clone()),
+                    Groupping::Time => group_by(*param, limit, &analyzed, |e| e.timestamp),
                     Groupping::Agent => group_by(*param, limit, &analyzed, |e| e.agent.clone()),
                     Groupping::ClientIp => {
                         group_by(*param, limit, &analyzed, |e| e.clientip.clone())
