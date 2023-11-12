@@ -1,8 +1,15 @@
 use clap::{command, ArgMatches, Command};
 use clap_complete::{generate, Shell};
 use color_eyre::eyre::Result;
-use npma::{analyze, console, filter::Criteria, read_strings_from_file, read_strings_from_stdin};
-use std::io;
+use core::hash::Hash;
+use itertools::Itertools;
+use npma::{
+    analyze,
+    console::{self, print_groupped},
+    filter::Criteria,
+    read_strings_from_file, read_strings_from_stdin, GrouppedParameter, Groupping, LogEntry,
+};
+use std::{fmt::Display, io};
 
 #[macro_use]
 extern crate clap;
@@ -37,7 +44,7 @@ async fn scan_file(cmd: &ArgMatches) -> Result<()> {
         let config = configure_scan(cmd);
         let entries = read_strings_from_file(path).await?;
         let analyzed = analyze(&entries, &config.filter);
-        console::print(analyzed.into_iter());
+        print_analyzed(cmd, analyzed);
     }
     Ok(())
 }
@@ -46,8 +53,46 @@ async fn scan_stdin(cmd: &ArgMatches) -> Result<()> {
     let config = configure_scan(cmd);
     let entries = read_strings_from_stdin().await;
     let analyzed = analyze(&entries, &config.filter);
-    console::print(analyzed.into_iter());
+
+    print_analyzed(cmd, analyzed);
     Ok(())
+}
+
+fn print_analyzed(cmd: &ArgMatches, analyzed: Vec<LogEntry>) {
+    if let Some(("g", cmd)) = cmd.subcommand() {
+        let limit = cmd.get_one::<usize>("top");
+        if let Some(param) = cmd.get_one::<Groupping>("parameter") {
+            match param {
+                Groupping::Time => group_by(*param, limit, &analyzed, |e| e.timestamp.clone()),
+                Groupping::Agent => group_by(*param, limit, &analyzed, |e| e.agent.clone()),
+                Groupping::ClientIp => group_by(*param, limit, &analyzed, |e| e.clientip.clone()),
+                Groupping::Status => group_by(*param, limit, &analyzed, |e| e.status),
+                Groupping::Method => group_by(*param, limit, &analyzed, |e| e.method.clone()),
+                Groupping::Schema => group_by(*param, limit, &analyzed, |e| e.schema.clone()),
+                Groupping::Request => group_by(*param, limit, &analyzed, |e| e.request.clone()),
+                Groupping::Referrer => group_by(*param, limit, &analyzed, |e| e.referrer.clone()),
+            }
+        }
+    } else {
+        console::print(analyzed.into_iter());
+    }
+}
+
+fn group_by<T, F>(parameter: Groupping, limit: Option<&usize>, data: &[LogEntry], f: F)
+where
+    T: Default + Display + Hash + Eq,
+    F: Fn(&LogEntry) -> T,
+{
+    let groupped = data
+        .iter()
+        .into_group_map_by(|e| f(e))
+        .into_iter()
+        .map(|(parameter, grp)| GrouppedParameter {
+            parameter,
+            count: grp.len(),
+        })
+        .collect();
+    print_groupped(parameter, groupped, limit);
 }
 
 /// Creates application configuration from parsed command line
@@ -98,6 +143,7 @@ fn file_cmd() -> Command {
                 .required(false)
                 .help(INCLUDE_HELP),
         )
+        .subcommand(groupping_cmd())
 }
 
 fn stdin_cmd() -> Command {
@@ -114,6 +160,7 @@ fn stdin_cmd() -> Command {
                 .required(false)
                 .help(INCLUDE_HELP),
         )
+        .subcommand(groupping_cmd())
 }
 
 fn completion_cmd() -> Command {
@@ -122,6 +169,24 @@ fn completion_cmd() -> Command {
         .arg(
             arg!([generator])
                 .value_parser(value_parser!(Shell))
+                .required(true)
+                .index(1),
+        )
+}
+
+fn groupping_cmd() -> Command {
+    Command::new("g")
+        .aliases(["group"])
+        .about("Groups log entries using parameter specified. After grouping the number of each group items will be displayed")
+        .arg(
+            arg!(-t --top <NUMBER>)
+                .required(false)
+                .value_parser(value_parser!(usize))
+                .help("Output only specified number of groupped items"),
+        )
+        .arg(
+            arg!([parameter])
+                .value_parser(value_parser!(Groupping))
                 .required(true)
                 .index(1),
         )

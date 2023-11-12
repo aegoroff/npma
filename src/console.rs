@@ -1,7 +1,10 @@
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Cell, ContentArrangement, Table};
+use core::hash::Hash;
+use itertools::Itertools;
+use std::fmt::Display;
 
-use crate::LogEntry;
+use crate::{calculate_percent, GrouppedParameter, Groupping, LogEntry};
 
 /// Prints results table
 pub fn print(data: impl Iterator<Item = LogEntry>) {
@@ -36,6 +39,60 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
             Cell::new(entry.referrer),
         ]);
     });
+    let total = table.row_iter().count();
+    if total > 0 {
+        println!("{table}");
+        println!("Total items: {total}");
+    }
+}
+
+pub fn print_groupped<T: Default + Display + Hash + Eq>(
+    parameter: Groupping,
+    data: Vec<GrouppedParameter<T>>,
+    limit: Option<&usize>,
+) {
+    let parameter_name = match parameter {
+        Groupping::Time => "Time",
+        Groupping::Agent => "User agent",
+        Groupping::ClientIp => "Client IP",
+        Groupping::Status => "HTTP Status",
+        Groupping::Method => "HTTP Method",
+        Groupping::Schema => "Schema",
+        Groupping::Request => "Request URI",
+        Groupping::Referrer => "Referrer",
+    };
+
+    let mut table = Table::new();
+    table
+        .load_preset(UTF8_HORIZONTAL_ONLY)
+        .set_header(vec![
+            Cell::new(parameter_name).add_attribute(Attribute::Bold),
+            Cell::new("Count").add_attribute(Attribute::Bold),
+            Cell::new("Proportion").add_attribute(Attribute::Bold),
+        ])
+        .set_content_arrangement(ContentArrangement::Dynamic);
+
+    let total_count = data.iter().fold(0, |acc, x| acc + x.count);
+
+    data.into_iter()
+        .sorted_unstable_by(|a, b| Ord::cmp(&b.count, &a.count))
+        .enumerate()
+        .take_while(|(count, _)| {
+            if let Some(limit) = limit {
+                *limit > *count
+            } else {
+                true
+            }
+        })
+        .map(|(_, entry)| entry)
+        .for_each(|entry| {
+            let percent = calculate_percent(entry.count as i32, total_count as i32);
+            table.add_row(vec![
+                Cell::new(entry.parameter),
+                Cell::new(entry.count),
+                Cell::new(format!("{percent:.2}%")),
+            ]);
+        });
     let total = table.row_iter().count();
     if total > 0 {
         println!("{table}");

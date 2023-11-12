@@ -1,4 +1,8 @@
+use clap::builder::PossibleValue;
+use clap::ValueEnum;
 use color_eyre::eyre::{Context, Result};
+use core::hash::Hash;
+use std::fmt::Display;
 use std::path::Path;
 
 use filter::Criteria;
@@ -103,6 +107,15 @@ where
         .await
 }
 
+#[must_use]
+pub fn calculate_percent(value: i32, total: i32) -> f64 {
+    if total == 0 {
+        0_f64
+    } else {
+        (f64::from(value) / f64::from(total)) * 100_f64
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct LogEntry {
     pub agent: String,
@@ -120,8 +133,65 @@ pub struct LogEntry {
     pub line: u64,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum Groupping {
+    Time,
+    Agent,
+    ClientIp,
+    Status,
+    Method,
+    Schema,
+    Request,
+    Referrer,
+}
+
+#[derive(Default, Debug)]
+pub struct GrouppedParameter<T: Default + Display + Hash + Eq> {
+    pub parameter: T,
+    pub count: usize,
+}
+
+impl Display for Groupping {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_possible_value()
+            .expect("no values are skipped")
+            .get_name()
+            .fmt(f)
+    }
+}
+
+// Hand-rolled so it can work even when `derive` feature is disabled
+impl ValueEnum for Groupping {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[
+            Groupping::Time,
+            Groupping::Agent,
+            Groupping::ClientIp,
+            Groupping::Status,
+            Groupping::Method,
+            Groupping::Schema,
+            Groupping::Request,
+            Groupping::Referrer,
+        ]
+    }
+
+    fn to_possible_value<'a>(&self) -> Option<PossibleValue> {
+        Some(match self {
+            Groupping::Time => PossibleValue::new("time"),
+            Groupping::Agent => PossibleValue::new("agent"),
+            Groupping::ClientIp => PossibleValue::new("client"),
+            Groupping::Status => PossibleValue::new("status"),
+            Groupping::Method => PossibleValue::new("method"),
+            Groupping::Schema => PossibleValue::new("schema"),
+            Groupping::Request => PossibleValue::new("req"),
+            Groupping::Referrer => PossibleValue::new("ref"),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
     use std::io::Cursor;
 
     use super::*;
@@ -198,5 +268,22 @@ mod tests {
         assert_eq!(2, result.len());
         assert_eq!("a", result[0]);
         assert_eq!("b", result[1]);
+    }
+
+    #[rstest]
+    #[case(1, 100, 1.0)]
+    #[case(0, 100, 0.0)]
+    #[case(100, 100, 100.0)]
+    #[case(50, 100, 50.0)]
+    #[case(20, 100, 20.0)]
+    #[trace]
+    fn calculate_percent_tests(#[case] value: i32, #[case] total: i32, #[case] expected: f64) {
+        // Arrange
+
+        // Act
+        let actual = calculate_percent(value, total);
+
+        // Assert
+        assert_eq!(actual, expected);
     }
 }
