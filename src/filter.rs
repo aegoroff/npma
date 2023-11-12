@@ -153,9 +153,7 @@ mod tests {
     }
 
     #[rstest]
-    fn allow_entry_different_patterns_for_both_that_that_match_only_include_test(
-        log_entry: LogEntry,
-    ) {
+    fn allow_entry_different_patterns_for_both_that_match_only_include_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(Some(&"a".to_string()), Some(&"b".to_string()));
 
@@ -167,9 +165,7 @@ mod tests {
     }
 
     #[rstest]
-    fn allow_entry_different_patterns_for_both_that_that_match_only_exclude_test(
-        log_entry: LogEntry,
-    ) {
+    fn allow_entry_different_patterns_for_both_that_match_only_exclude_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(Some(&"b".to_string()), Some(&"a".to_string()));
 
@@ -181,7 +177,7 @@ mod tests {
     }
 
     #[rstest]
-    fn allow_entry_different_patterns_for_both_that_that_not_match_any_pattern_test(
+    fn allow_entry_different_patterns_for_both_that_not_match_any_pattern_test(
         log_entry: LogEntry,
     ) {
         // arrange
