@@ -69,84 +69,84 @@ mod tests {
     }
 
     #[rstest]
-    fn allow_entry_include_match_test(vuln_pathed: LogEntry) {
+    fn allow_entry_include_match_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(Some(&"a".to_string()), None);
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(r)
     }
 
     #[rstest]
-    fn allow_entry_invalid_pattern_test(vuln_pathed: LogEntry) {
+    fn allow_entry_invalid_pattern_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(Some(&"a[".to_string()), None);
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(r)
     }
 
     #[rstest]
-    fn allow_entry_include_not_match_test(vuln_pathed: LogEntry) {
+    fn allow_entry_include_not_match_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(Some(&"b".to_string()), None);
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(!r)
     }
 
     #[rstest]
-    fn allow_entry_exclude_match_test(vuln_pathed: LogEntry) {
+    fn allow_entry_exclude_match_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(None, Some(&"a".to_string()));
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(!r)
     }
 
     #[rstest]
-    fn allow_entry_exclude_not_match_test(vuln_pathed: LogEntry) {
+    fn allow_entry_exclude_not_match_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(None, Some(&"b".to_string()));
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(r)
     }
 
     #[rstest]
-    fn allow_entry_same_pattern_for_both_that_match_request_test(vuln_pathed: LogEntry) {
+    fn allow_entry_same_pattern_for_both_that_match_request_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(Some(&"a".to_string()), Some(&"a".to_string()));
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(!r)
     }
 
     #[rstest]
-    fn allow_entry_same_pattern_for_both_that_not_match_request_test(vuln_pathed: LogEntry) {
+    fn allow_entry_same_pattern_for_both_that_not_match_request_test(log_entry: LogEntry) {
         // arrange
         let filter = Criteria::new(Some(&"b".to_string()), Some(&"b".to_string()));
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(!r)
@@ -154,13 +154,13 @@ mod tests {
 
     #[rstest]
     fn allow_entry_different_patterns_for_both_that_that_match_only_include_test(
-        vuln_pathed: LogEntry,
+        log_entry: LogEntry,
     ) {
         // arrange
         let filter = Criteria::new(Some(&"a".to_string()), Some(&"b".to_string()));
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(r)
@@ -168,13 +168,13 @@ mod tests {
 
     #[rstest]
     fn allow_entry_different_patterns_for_both_that_that_match_only_exclude_test(
-        vuln_pathed: LogEntry,
+        log_entry: LogEntry,
     ) {
         // arrange
         let filter = Criteria::new(Some(&"b".to_string()), Some(&"a".to_string()));
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(!r)
@@ -182,20 +182,20 @@ mod tests {
 
     #[rstest]
     fn allow_entry_different_patterns_for_both_that_that_not_match_any_pattern_test(
-        vuln_pathed: LogEntry,
+        log_entry: LogEntry,
     ) {
         // arrange
         let filter = Criteria::new(Some(&"b".to_string()), Some(&"c".to_string()));
 
         // act
-        let r = filter.allow(&vuln_pathed);
+        let r = filter.allow(&log_entry);
 
         // assert
         assert!(!r)
     }
 
     #[fixture]
-    fn vuln_pathed() -> LogEntry {
+    fn log_entry() -> LogEntry {
         LogEntry {
             request: "a".to_string(),
             ..Default::default()
