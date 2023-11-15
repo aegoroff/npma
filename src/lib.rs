@@ -18,7 +18,11 @@ pub mod console;
 pub mod filter;
 
 #[must_use]
-pub fn analyze(entries: &[String], filter: &Criteria) -> Vec<LogEntry> {
+pub fn analyze(
+    entries: &[String],
+    filter: &Criteria,
+    parameter: Option<LogParameter>,
+) -> Vec<LogEntry> {
     let items = entries
         .iter()
         .group_by(|s| s.contains("pattern: NGINXPROXYACCESS"));
@@ -26,14 +30,11 @@ pub fn analyze(entries: &[String], filter: &Criteria) -> Vec<LogEntry> {
         .into_iter()
         .filter_map(|(is_head, g)| if is_head { None } else { Some(g) })
         .enumerate()
-        .map(|(line, g)| {
+        .filter_map(|(line, g)| {
             let strings = g.cloned().collect_vec();
 
             let request = read_parameter(&strings, "request");
             let timestamp = read_parameter(&strings, "timestamp");
-            let timestamp =
-                DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
-
             let agent = read_parameter(&strings, "agent")
                 .trim_matches('"')
                 .to_string();
@@ -43,21 +44,41 @@ pub fn analyze(entries: &[String], filter: &Criteria) -> Vec<LogEntry> {
             let length = read_parameter(&strings, "length");
             let status = read_parameter(&strings, "status");
             let referrer = read_parameter(&strings, "referrer");
-            LogEntry {
-                line: line as u64 + 1,
-                request,
-                agent,
-                timestamp,
-                clientip,
-                method,
-                schema,
-                referrer,
-                length: length.parse().unwrap_or_default(),
-                status: status.parse().unwrap_or_default(),
-                ..Default::default()
+
+            let allow = if let Some(parameter) = parameter {
+                match parameter {
+                    LogParameter::Time => filter.allow(&timestamp),
+                    LogParameter::Agent => filter.allow(&agent),
+                    LogParameter::ClientIp => filter.allow(&clientip),
+                    LogParameter::Status => filter.allow(&status),
+                    LogParameter::Method => filter.allow(&method),
+                    LogParameter::Schema => filter.allow(&schema),
+                    LogParameter::Request => filter.allow(&request),
+                    LogParameter::Referrer => filter.allow(&referrer),
+                }
+            } else {
+                true
+            };
+
+            if allow {
+                Some(LogEntry {
+                    line: line as u64 + 1,
+                    request,
+                    agent,
+                    timestamp: DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z")
+                        .unwrap_or_default(),
+                    clientip,
+                    method,
+                    schema,
+                    referrer,
+                    length: length.parse().unwrap_or_default(),
+                    status: status.parse().unwrap_or_default(),
+                    ..Default::default()
+                })
+            } else {
+                None
             }
         })
-        .filter(|e| filter.allow(e))
         .collect_vec()
 }
 
@@ -137,14 +158,15 @@ pub struct LogEntry {
     pub line: u64,
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum Groupping {
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Default)]
+pub enum LogParameter {
     Time,
     Agent,
     ClientIp,
     Status,
     Method,
     Schema,
+    #[default]
     Request,
     Referrer,
 }
@@ -155,7 +177,7 @@ pub struct GrouppedParameter<T: Default + Display + Hash + Eq> {
     pub count: usize,
 }
 
-impl Display for Groupping {
+impl Display for LogParameter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.to_possible_value()
             .expect("no values are skipped")
@@ -165,30 +187,30 @@ impl Display for Groupping {
 }
 
 // Hand-rolled so it can work even when `derive` feature is disabled
-impl ValueEnum for Groupping {
+impl ValueEnum for LogParameter {
     fn value_variants<'a>() -> &'a [Self] {
         &[
-            Groupping::Time,
-            Groupping::Agent,
-            Groupping::ClientIp,
-            Groupping::Status,
-            Groupping::Method,
-            Groupping::Schema,
-            Groupping::Request,
-            Groupping::Referrer,
+            LogParameter::Time,
+            LogParameter::Agent,
+            LogParameter::ClientIp,
+            LogParameter::Status,
+            LogParameter::Method,
+            LogParameter::Schema,
+            LogParameter::Request,
+            LogParameter::Referrer,
         ]
     }
 
     fn to_possible_value<'a>(&self) -> Option<PossibleValue> {
         Some(match self {
-            Groupping::Time => PossibleValue::new("time"),
-            Groupping::Agent => PossibleValue::new("agent"),
-            Groupping::ClientIp => PossibleValue::new("client"),
-            Groupping::Status => PossibleValue::new("status"),
-            Groupping::Method => PossibleValue::new("method"),
-            Groupping::Schema => PossibleValue::new("schema"),
-            Groupping::Request => PossibleValue::new("req"),
-            Groupping::Referrer => PossibleValue::new("ref"),
+            LogParameter::Time => PossibleValue::new("time"),
+            LogParameter::Agent => PossibleValue::new("agent"),
+            LogParameter::ClientIp => PossibleValue::new("client"),
+            LogParameter::Status => PossibleValue::new("status"),
+            LogParameter::Method => PossibleValue::new("method"),
+            LogParameter::Schema => PossibleValue::new("schema"),
+            LogParameter::Request => PossibleValue::new("req"),
+            LogParameter::Referrer => PossibleValue::new("ref"),
         })
     }
 }

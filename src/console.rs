@@ -4,7 +4,7 @@ use core::hash::Hash;
 use itertools::Itertools;
 use std::fmt::Display;
 
-use crate::{calculate_percent, GrouppedParameter, Groupping, LogEntry};
+use crate::{calculate_percent, GrouppedParameter, LogEntry, LogParameter};
 
 /// Prints results table
 pub fn print(data: impl Iterator<Item = LogEntry>) {
@@ -47,19 +47,19 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
 }
 
 pub fn print_groupped<T: Default + Display + Hash + Eq>(
-    parameter: Groupping,
+    parameter: LogParameter,
     data: Vec<GrouppedParameter<T>>,
     limit: Option<&usize>,
 ) {
     let parameter_name = match parameter {
-        Groupping::Time => "Time",
-        Groupping::Agent => "User agent",
-        Groupping::ClientIp => "Client IP",
-        Groupping::Status => "HTTP Status",
-        Groupping::Method => "HTTP Method",
-        Groupping::Schema => "Schema",
-        Groupping::Request => "Request URI",
-        Groupping::Referrer => "Referrer",
+        LogParameter::Time => "Time",
+        LogParameter::Agent => "User agent",
+        LogParameter::ClientIp => "Client IP",
+        LogParameter::Status => "HTTP Status",
+        LogParameter::Method => "HTTP Method",
+        LogParameter::Schema => "Schema",
+        LogParameter::Request => "Request URI",
+        LogParameter::Referrer => "Referrer",
     };
 
     let mut table = Table::new();

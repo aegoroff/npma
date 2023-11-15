@@ -8,7 +8,7 @@ use npma::{
     analyze,
     console::{self, print_groupped},
     filter::Criteria,
-    read_strings_from_file, read_strings_from_stdin, GrouppedParameter, Groupping, LogEntry,
+    read_strings_from_file, read_strings_from_stdin, GrouppedParameter, LogEntry, LogParameter,
 };
 use std::{fmt::Display, io};
 
@@ -21,6 +21,7 @@ const INCLUDE_HELP: &str = "Include only requests that match this pattern";
 
 struct ScanConfiguration {
     filter: Criteria,
+    parameter: Option<LogParameter>,
 }
 
 #[tokio::main]
@@ -44,7 +45,7 @@ async fn scan_file(cmd: &ArgMatches) -> Result<()> {
     if let Some(path) = cmd.get_one::<String>(PATH) {
         let config = configure_scan(cmd);
         let entries = read_strings_from_file(path).await?;
-        let analyzed = analyze(&entries, &config.filter);
+        let analyzed = analyze(&entries, &config.filter, config.parameter);
         print_analyzed(cmd, analyzed);
     }
     Ok(())
@@ -53,7 +54,7 @@ async fn scan_file(cmd: &ArgMatches) -> Result<()> {
 async fn scan_stdin(cmd: &ArgMatches) -> Result<()> {
     let config = configure_scan(cmd);
     let entries = read_strings_from_stdin().await;
-    let analyzed = analyze(&entries, &config.filter);
+    let analyzed = analyze(&entries, &config.filter, config.parameter);
 
     print_analyzed(cmd, analyzed);
     Ok(())
@@ -63,18 +64,24 @@ fn print_analyzed(cmd: &ArgMatches, analyzed: Vec<LogEntry>) {
     match cmd.subcommand() {
         Some(("g", cmd)) => {
             let limit = cmd.get_one::<usize>("top");
-            if let Some(param) = cmd.get_one::<Groupping>("parameter") {
+            if let Some(param) = cmd.get_one::<LogParameter>("parameter") {
                 match param {
-                    Groupping::Time => group_by(*param, limit, &analyzed, |e| e.timestamp),
-                    Groupping::Agent => group_by(*param, limit, &analyzed, |e| e.agent.clone()),
-                    Groupping::ClientIp => {
+                    LogParameter::Time => group_by(*param, limit, &analyzed, |e| e.timestamp),
+                    LogParameter::Agent => group_by(*param, limit, &analyzed, |e| e.agent.clone()),
+                    LogParameter::ClientIp => {
                         group_by(*param, limit, &analyzed, |e| e.clientip.clone())
                     }
-                    Groupping::Status => group_by(*param, limit, &analyzed, |e| e.status),
-                    Groupping::Method => group_by(*param, limit, &analyzed, |e| e.method.clone()),
-                    Groupping::Schema => group_by(*param, limit, &analyzed, |e| e.schema.clone()),
-                    Groupping::Request => group_by(*param, limit, &analyzed, |e| e.request.clone()),
-                    Groupping::Referrer => {
+                    LogParameter::Status => group_by(*param, limit, &analyzed, |e| e.status),
+                    LogParameter::Method => {
+                        group_by(*param, limit, &analyzed, |e| e.method.clone())
+                    }
+                    LogParameter::Schema => {
+                        group_by(*param, limit, &analyzed, |e| e.schema.clone())
+                    }
+                    LogParameter::Request => {
+                        group_by(*param, limit, &analyzed, |e| e.request.clone())
+                    }
+                    LogParameter::Referrer => {
                         group_by(*param, limit, &analyzed, |e| e.referrer.clone())
                     }
                 }
@@ -89,7 +96,7 @@ fn print_analyzed(cmd: &ArgMatches, analyzed: Vec<LogEntry>) {
     }
 }
 
-fn group_by<T, F>(parameter: Groupping, limit: Option<&usize>, data: &[LogEntry], f: F)
+fn group_by<T, F>(parameter: LogParameter, limit: Option<&usize>, data: &[LogEntry], f: F)
 where
     T: Default + Display + Hash + Eq,
     F: Fn(&LogEntry) -> T,
@@ -110,9 +117,10 @@ where
 fn configure_scan(cmd: &ArgMatches) -> ScanConfiguration {
     let include_pattern = cmd.get_one::<String>("include");
     let exclude_pattern = cmd.get_one::<String>("exclude");
+    let parameter = cmd.get_one::<LogParameter>("parameter").copied();
 
     let filter = Criteria::new(include_pattern, exclude_pattern);
-    ScanConfiguration { filter }
+    ScanConfiguration { filter, parameter }
 }
 
 fn build_cli() -> Command {
@@ -147,12 +155,19 @@ fn file_cmd() -> Command {
         .arg(
             arg!(-e --exclude <PATTERN>)
                 .required(false)
+                .requires("parameter")
                 .help(EXCLUDE_HELP),
         )
         .arg(
             arg!(-i --include <PATTERN>)
                 .required(false)
+                .requires("parameter")
                 .help(INCLUDE_HELP),
+        )
+        .arg(
+            arg!(-p --parameter <PARAMETER>)
+                .value_parser(value_parser!(LogParameter))
+                .help("Filter parameter"),
         )
         .subcommand(groupping_cmd())
         .subcommand(traffic_cmd())
@@ -165,12 +180,19 @@ fn stdin_cmd() -> Command {
         .arg(
             arg!(-e --exclude <PATTERN>)
                 .required(false)
+                .requires("parameter")
                 .help(EXCLUDE_HELP),
         )
         .arg(
             arg!(-i --include <PATTERN>)
                 .required(false)
+                .requires("parameter")
                 .help(INCLUDE_HELP),
+        )
+        .arg(
+            arg!(-p --parameter <PARAMETER>)
+                .value_parser(value_parser!(LogParameter))
+                .help("Filter parameter"),
         )
         .subcommand(groupping_cmd())
         .subcommand(traffic_cmd())
@@ -199,7 +221,7 @@ fn groupping_cmd() -> Command {
         )
         .arg(
             arg!([parameter])
-                .value_parser(value_parser!(Groupping))
+                .value_parser(value_parser!(LogParameter))
                 .required(true)
                 .index(1),
         )
