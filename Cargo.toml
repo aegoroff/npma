@@ -18,7 +18,7 @@ tokio-util = { version = "0.7.10", features = ["full"] }
 tokio-stream =  { version = "0.1.14", features = ["io-util"] }
 clap = { version = "4.4.8", features = ["std", "color", "suggestions", "cargo"] }
 clap_complete = "4.4.4"
-itertools = "0.11.0"
+itertools = "0.12.0"
 regex = "1.10.2"
 comfy-table = "7.1.0"
 humantime = "2.1.0"
