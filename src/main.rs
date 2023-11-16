@@ -1,4 +1,4 @@
-use clap::{command, ArgMatches, Command};
+use clap::{command, Arg, ArgMatches, Command};
 use clap_complete::{generate, Shell};
 use color_eyre::eyre::Result;
 use core::hash::Hash;
@@ -152,23 +152,9 @@ fn file_cmd() -> Command {
                 .help("Sets file path to analyze")
                 .required(true),
         )
-        .arg(
-            arg!(-e --exclude <PATTERN>)
-                .required(false)
-                .requires("parameter")
-                .help(EXCLUDE_HELP),
-        )
-        .arg(
-            arg!(-i --include <PATTERN>)
-                .required(false)
-                .requires("parameter")
-                .help(INCLUDE_HELP),
-        )
-        .arg(
-            arg!(-p --parameter <PARAMETER>)
-                .value_parser(value_parser!(LogParameter))
-                .help("Filter parameter"),
-        )
+        .arg(exclude_arg())
+        .arg(include_arg())
+        .arg(parameter_arg())
         .subcommand(groupping_cmd())
         .subcommand(traffic_cmd())
 }
@@ -177,25 +163,31 @@ fn stdin_cmd() -> Command {
     Command::new("i")
         .aliases(["stdin"])
         .about("Analyse data from standard input")
-        .arg(
-            arg!(-e --exclude <PATTERN>)
-                .required(false)
-                .requires("parameter")
-                .help(EXCLUDE_HELP),
-        )
-        .arg(
-            arg!(-i --include <PATTERN>)
-                .required(false)
-                .requires("parameter")
-                .help(INCLUDE_HELP),
-        )
-        .arg(
-            arg!(-p --parameter <PARAMETER>)
-                .value_parser(value_parser!(LogParameter))
-                .help("Filter parameter"),
-        )
+        .arg(exclude_arg())
+        .arg(include_arg())
+        .arg(parameter_arg())
         .subcommand(groupping_cmd())
         .subcommand(traffic_cmd())
+}
+
+fn exclude_arg() -> Arg {
+    arg!(-e --exclude <PATTERN>)
+        .required(false)
+        .requires("parameter")
+        .help(EXCLUDE_HELP)
+}
+
+fn include_arg() -> Arg {
+    arg!(-i --include <PATTERN>)
+        .required(false)
+        .requires("parameter")
+        .help(INCLUDE_HELP)
+}
+
+fn parameter_arg() -> Arg {
+    arg!(-p --parameter <PARAMETER>)
+        .value_parser(value_parser!(LogParameter))
+        .help("Filter parameter")
 }
 
 fn completion_cmd() -> Command {
