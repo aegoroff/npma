@@ -38,6 +38,8 @@ pub fn analyze(
             let agent = read_parameter(&strings, "agent")
                 .trim_matches('"')
                 .to_string();
+            let timestamp =
+                DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
             let clientip = read_parameter(&strings, "clientip");
             let method = read_parameter(&strings, "method");
             let schema = read_parameter(&strings, "schema");
@@ -47,7 +49,10 @@ pub fn analyze(
 
             let allow = if let Some(parameter) = parameter {
                 match parameter {
-                    LogParameter::Time => filter.allow(&timestamp),
+                    LogParameter::Time => {
+                        let s = timestamp.to_string();
+                        filter.allow(&s)
+                    }
                     LogParameter::Agent => filter.allow(&agent),
                     LogParameter::ClientIp => filter.allow(&clientip),
                     LogParameter::Status => filter.allow(&status),
@@ -65,8 +70,7 @@ pub fn analyze(
                     line: line as u64 + 1,
                     request,
                     agent,
-                    timestamp: DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z")
-                        .unwrap_or_default(),
+                    timestamp,
                     clientip,
                     method,
                     schema,
