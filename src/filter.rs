@@ -2,7 +2,6 @@ use regex::Regex;
 
 /// Filtering criteria
 #[derive(Default, Debug)]
-/// Log filtering criteria
 pub struct Criteria {
     include_regex: Option<Regex>,
     exclude_regex: Option<Regex>,
