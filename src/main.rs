@@ -69,20 +69,20 @@ fn print_analyzed(cmd: &ArgMatches, analyzed: Vec<LogEntry>) {
                     LogParameter::Time => group_by(*param, limit, &analyzed, |e| e.timestamp),
                     LogParameter::Agent => group_by(*param, limit, &analyzed, |e| e.agent.clone()),
                     LogParameter::ClientIp => {
-                        group_by(*param, limit, &analyzed, |e| e.clientip.clone())
+                        group_by(*param, limit, &analyzed, |e| e.clientip.clone());
                     }
                     LogParameter::Status => group_by(*param, limit, &analyzed, |e| e.status),
                     LogParameter::Method => {
-                        group_by(*param, limit, &analyzed, |e| e.method.clone())
+                        group_by(*param, limit, &analyzed, |e| e.method.clone());
                     }
                     LogParameter::Schema => {
-                        group_by(*param, limit, &analyzed, |e| e.schema.clone())
+                        group_by(*param, limit, &analyzed, |e| e.schema.clone());
                     }
                     LogParameter::Request => {
-                        group_by(*param, limit, &analyzed, |e| e.request.clone())
+                        group_by(*param, limit, &analyzed, |e| e.request.clone());
                     }
                     LogParameter::Referrer => {
-                        group_by(*param, limit, &analyzed, |e| e.referrer.clone())
+                        group_by(*param, limit, &analyzed, |e| e.referrer.clone());
                     }
                 }
             }
