@@ -87,7 +87,7 @@ pub fn analyze(
 
 fn find(hash: &HashMap<&str, &str>, parameter: &str) -> String {
     if let Some(v) = hash.get(parameter) {
-        v.to_string()
+        (*v).to_string()
     } else {
         String::new()
     }
