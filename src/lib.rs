@@ -133,6 +133,7 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
+    #[must_use]
     pub fn new(
         content: &[String],
         line: u64,
