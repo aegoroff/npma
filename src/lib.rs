@@ -8,7 +8,6 @@ use std::fmt::Display;
 use std::path::Path;
 
 use filter::Criteria;
-use itertools::Itertools;
 use tokio::fs::File;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncRead};
@@ -27,65 +26,31 @@ pub async fn analyze<S: Stream<Item = String>>(
     filter: &Criteria,
     parameter: Option<LogParameter>,
 ) -> Vec<LogEntry> {
-    let items: Vec<String> = entries.collect().await;
-    items
-        .iter()
-        .group_by(|s| s.contains("pattern: NGINXPROXYACCESS"))
-        .into_iter()
-        .filter_map(|(is_head, g)| if is_head { None } else { Some(g) })
-        .enumerate()
-        .filter_map(|(line, g)| {
-            let h = hash(g);
+    let mut content = vec![];
+    let mut line: u64 = 0;
 
-            let request = find(&h, "request");
-            let timestamp = find(&h, "timestamp");
-            let agent = find(&h, "agent").trim_matches('"').to_string();
-            let timestamp =
-                DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
-            let clientip = find(&h, "clientip");
-            let method = find(&h, "method");
-            let schema = find(&h, "schema");
-            let length = find(&h, "length");
-            let status = find(&h, "status");
-            let referrer = find(&h, "referrer");
+    let mut result = entries
+        .fold(vec![], |mut v, s| {
+            if s.contains("pattern: NGINXPROXYACCESS") {
+                let entry = LogEntry::new(&content, line, filter, parameter);
+                content.clear();
+                line += 1;
 
-            let allow = if let Some(parameter) = parameter {
-                match parameter {
-                    LogParameter::Time => {
-                        let s = timestamp.to_string();
-                        filter.allow(&s)
-                    }
-                    LogParameter::Agent => filter.allow(&agent),
-                    LogParameter::ClientIp => filter.allow(&clientip),
-                    LogParameter::Status => filter.allow(&status),
-                    LogParameter::Method => filter.allow(&method),
-                    LogParameter::Schema => filter.allow(&schema),
-                    LogParameter::Request => filter.allow(&request),
-                    LogParameter::Referrer => filter.allow(&referrer),
+                if let Some(entry) = entry {
+                    v.push(entry);
                 }
-            } else {
-                true
-            };
-
-            if allow {
-                Some(LogEntry {
-                    line: line as u64 + 1,
-                    request,
-                    agent,
-                    timestamp,
-                    clientip,
-                    method,
-                    schema,
-                    referrer,
-                    length: length.parse().unwrap_or_default(),
-                    status: status.parse().unwrap_or_default(),
-                    ..Default::default()
-                })
-            } else {
-                None
+            } else if !s.is_empty() && !s.ends_with(VALUE_SEPARATOR) {
+                content.push(s);
             }
+            v
         })
-        .collect_vec()
+        .await;
+    // Last line
+    let entry = LogEntry::new(&content, line, filter, parameter);
+    if let Some(entry) = entry {
+        result.push(entry);
+    }
+    result
 }
 
 fn find(hash: &HashMap<&str, &str>, parameter: &str) -> String {
@@ -119,21 +84,19 @@ pub async fn read_strings_from_file<P: AsRef<Path>>(path: P) -> Result<impl Stre
     let file = File::open(path)
         .await
         .wrap_err_with(|| format!("Log file '{path}' cannot be opened"))?;
-    Ok(read_not_empty_strings_from(file).await)
+    Ok(read_not_empty_strings_from(file))
 }
 
 /// Reads strings from stdin.
-pub async fn read_strings_from_stdin() -> impl Stream<Item = String> {
-    read_not_empty_strings_from(tokio::io::stdin()).await
+pub fn read_strings_from_stdin() -> impl Stream<Item = String> {
+    read_not_empty_strings_from(tokio::io::stdin())
 }
 
-async fn read_not_empty_strings_from<R: AsyncRead + Unpin>(
-    reader: R,
-) -> impl Stream<Item = String> {
-    read_strings_from(reader, |entry| !entry.is_empty()).await
+fn read_not_empty_strings_from<R: AsyncRead + Unpin>(reader: R) -> impl Stream<Item = String> {
+    read_strings_from(reader, |entry| !entry.is_empty())
 }
 
-async fn read_strings_from<R, F>(reader: R, filter: F) -> impl Stream<Item = String>
+fn read_strings_from<R, F>(reader: R, filter: F) -> impl Stream<Item = String>
 where
     F: FnMut(&String) -> bool,
     R: AsyncRead + Unpin,
@@ -167,6 +130,69 @@ pub struct LogEntry {
     pub status: u16,
     pub timestamp: DateTime<FixedOffset>,
     pub line: u64,
+}
+
+impl LogEntry {
+    pub fn new(
+        content: &[String],
+        line: u64,
+        filter: &Criteria,
+        parameter: Option<LogParameter>,
+    ) -> Option<Self> {
+        if content.is_empty() {
+            None
+        } else {
+            let h = hash(content.iter());
+
+            let request = find(&h, "request");
+            let timestamp = find(&h, "timestamp");
+            let agent = find(&h, "agent").trim_matches('"').to_string();
+            let timestamp =
+                DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
+            let clientip = find(&h, "clientip");
+            let method = find(&h, "method");
+            let schema = find(&h, "schema");
+            let length = find(&h, "length");
+            let status = find(&h, "status");
+            let referrer = find(&h, "referrer");
+
+            let allow = if let Some(parameter) = parameter {
+                match parameter {
+                    LogParameter::Time => {
+                        let s = timestamp.to_string();
+                        filter.allow(&s)
+                    }
+                    LogParameter::Agent => filter.allow(&agent),
+                    LogParameter::ClientIp => filter.allow(&clientip),
+                    LogParameter::Status => filter.allow(&status),
+                    LogParameter::Method => filter.allow(&method),
+                    LogParameter::Schema => filter.allow(&schema),
+                    LogParameter::Request => filter.allow(&request),
+                    LogParameter::Referrer => filter.allow(&referrer),
+                }
+            } else {
+                true
+            };
+
+            if allow {
+                Some(LogEntry {
+                    line,
+                    request,
+                    agent,
+                    timestamp,
+                    clientip,
+                    method,
+                    schema,
+                    referrer,
+                    length: length.parse().unwrap_or_default(),
+                    status: status.parse().unwrap_or_default(),
+                    ..Default::default()
+                })
+            } else {
+                None
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Default)]
@@ -239,7 +265,7 @@ mod tests {
         let cursor = Cursor::new(b"a\nb\r\nc");
 
         // Act
-        let mut result = read_strings_from(cursor, |_| true).await;
+        let mut result = read_strings_from(cursor, |_| true);
 
         // Assert
         assert_eq!("a", result.next().await.unwrap());
@@ -254,7 +280,7 @@ mod tests {
         let cursor = Cursor::new(b"a\n\nb");
 
         // Act
-        let mut result = read_strings_from(cursor, |_| true).await;
+        let mut result = read_strings_from(cursor, |_| true);
 
         // Assert
         assert_eq!("a", result.next().await.unwrap());
@@ -269,7 +295,7 @@ mod tests {
         let cursor = Cursor::new(b"a\r\n\r\nb");
 
         // Act
-        let mut result = read_strings_from(cursor, |_| true).await;
+        let mut result = read_strings_from(cursor, |_| true);
 
         // Assert
         assert_eq!("a", result.next().await.unwrap());
@@ -284,7 +310,7 @@ mod tests {
         let cursor = Cursor::new(b"a\nb\r\nc");
 
         // Act
-        let mut result = read_not_empty_strings_from(cursor).await;
+        let mut result = read_not_empty_strings_from(cursor);
 
         // Assert
         assert_eq!("a", result.next().await.unwrap());
@@ -299,7 +325,7 @@ mod tests {
         let cursor = Cursor::new(b"a\n\nb");
 
         // Act
-        let mut result = read_not_empty_strings_from(cursor).await;
+        let mut result = read_not_empty_strings_from(cursor);
 
         // Assert
         assert_eq!("a", result.next().await.unwrap());

@@ -53,7 +53,7 @@ async fn scan_file(cmd: &ArgMatches) -> Result<()> {
 
 async fn scan_stdin(cmd: &ArgMatches) -> Result<()> {
     let config = configure_scan(cmd);
-    let entries = read_strings_from_stdin().await;
+    let entries = read_strings_from_stdin();
     let analyzed = analyze(entries, &config.filter, config.parameter).await;
 
     print_analyzed(cmd, analyzed);
