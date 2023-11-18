@@ -13,7 +13,7 @@ use tokio::fs::File;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncRead};
 use tokio_stream::wrappers::LinesStream;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 
 pub mod console;
 pub mod filter;
@@ -22,12 +22,13 @@ const VALUE_SEPARATOR: char = ':';
 const TRIM_VALUE_PATTERN: &[char] = &[VALUE_SEPARATOR, ' '];
 
 #[must_use]
-pub fn analyze(
-    entries: &[String],
+pub async fn analyze<S: Stream<Item = String>>(
+    entries: S,
     filter: &Criteria,
     parameter: Option<LogParameter>,
 ) -> Vec<LogEntry> {
-    entries
+    let items: Vec<String> = entries.collect().await;
+    items
         .iter()
         .group_by(|s| s.contains("pattern: NGINXPROXYACCESS"))
         .into_iter()
@@ -113,7 +114,7 @@ where
 /// # Errors
 ///
 /// This function will return an error if file specified by `path` cannot be opened or not exist.
-pub async fn read_strings_from_file<P: AsRef<Path>>(path: P) -> Result<Vec<String>> {
+pub async fn read_strings_from_file<P: AsRef<Path>>(path: P) -> Result<impl Stream<Item = String>> {
     let path = path.as_ref().to_str().unwrap_or_default();
     let file = File::open(path)
         .await
@@ -122,26 +123,24 @@ pub async fn read_strings_from_file<P: AsRef<Path>>(path: P) -> Result<Vec<Strin
 }
 
 /// Reads strings from stdin.
-pub async fn read_strings_from_stdin() -> Vec<String> {
+pub async fn read_strings_from_stdin() -> impl Stream<Item = String> {
     read_not_empty_strings_from(tokio::io::stdin()).await
 }
 
-async fn read_not_empty_strings_from<R: AsyncRead + Unpin>(reader: R) -> Vec<String> {
+async fn read_not_empty_strings_from<R: AsyncRead + Unpin>(
+    reader: R,
+) -> impl Stream<Item = String> {
     read_strings_from(reader, |entry| !entry.is_empty()).await
 }
 
-async fn read_strings_from<R, F>(reader: R, filter: F) -> Vec<String>
+async fn read_strings_from<R, F>(reader: R, filter: F) -> impl Stream<Item = String>
 where
     F: FnMut(&String) -> bool,
     R: AsyncRead + Unpin,
 {
     let lines = BufReader::new(reader).lines();
     let stream = LinesStream::new(lines);
-    stream
-        .filter_map(std::result::Result::ok)
-        .filter(filter)
-        .collect()
-        .await
+    stream.filter_map(std::result::Result::ok).filter(filter)
 }
 
 #[must_use]
@@ -240,13 +239,13 @@ mod tests {
         let cursor = Cursor::new(b"a\nb\r\nc");
 
         // Act
-        let result = read_strings_from(cursor, |_| true).await;
+        let mut result = read_strings_from(cursor, |_| true).await;
 
         // Assert
-        assert_eq!(3, result.len());
-        assert_eq!("a", result[0]);
-        assert_eq!("b", result[1]);
-        assert_eq!("c", result[2]);
+        assert_eq!("a", result.next().await.unwrap());
+        assert_eq!("b", result.next().await.unwrap());
+        assert_eq!("c", result.next().await.unwrap());
+        assert!(result.next().await.is_none());
     }
 
     #[tokio::test]
@@ -255,13 +254,13 @@ mod tests {
         let cursor = Cursor::new(b"a\n\nb");
 
         // Act
-        let result = read_strings_from(cursor, |_| true).await;
+        let mut result = read_strings_from(cursor, |_| true).await;
 
         // Assert
-        assert_eq!(3, result.len());
-        assert_eq!("a", result[0]);
-        assert_eq!("", result[1]);
-        assert_eq!("b", result[2]);
+        assert_eq!("a", result.next().await.unwrap());
+        assert_eq!("", result.next().await.unwrap());
+        assert_eq!("b", result.next().await.unwrap());
+        assert!(result.next().await.is_none());
     }
 
     #[tokio::test]
@@ -270,13 +269,13 @@ mod tests {
         let cursor = Cursor::new(b"a\r\n\r\nb");
 
         // Act
-        let result = read_strings_from(cursor, |_| true).await;
+        let mut result = read_strings_from(cursor, |_| true).await;
 
         // Assert
-        assert_eq!(3, result.len());
-        assert_eq!("a", result[0]);
-        assert_eq!("", result[1]);
-        assert_eq!("b", result[2]);
+        assert_eq!("a", result.next().await.unwrap());
+        assert_eq!("", result.next().await.unwrap());
+        assert_eq!("b", result.next().await.unwrap());
+        assert!(result.next().await.is_none());
     }
 
     #[tokio::test]
@@ -285,13 +284,13 @@ mod tests {
         let cursor = Cursor::new(b"a\nb\r\nc");
 
         // Act
-        let result = read_not_empty_strings_from(cursor).await;
+        let mut result = read_not_empty_strings_from(cursor).await;
 
         // Assert
-        assert_eq!(3, result.len());
-        assert_eq!("a", result[0]);
-        assert_eq!("b", result[1]);
-        assert_eq!("c", result[2]);
+        assert_eq!("a", result.next().await.unwrap());
+        assert_eq!("b", result.next().await.unwrap());
+        assert_eq!("c", result.next().await.unwrap());
+        assert!(result.next().await.is_none());
     }
 
     #[tokio::test]
@@ -300,12 +299,12 @@ mod tests {
         let cursor = Cursor::new(b"a\n\nb");
 
         // Act
-        let result = read_not_empty_strings_from(cursor).await;
+        let mut result = read_not_empty_strings_from(cursor).await;
 
         // Assert
-        assert_eq!(2, result.len());
-        assert_eq!("a", result[0]);
-        assert_eq!("b", result[1]);
+        assert_eq!("a", result.next().await.unwrap());
+        assert_eq!("b", result.next().await.unwrap());
+        assert!(result.next().await.is_none());
     }
 
     #[rstest]

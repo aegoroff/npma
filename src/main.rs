@@ -45,7 +45,7 @@ async fn scan_file(cmd: &ArgMatches) -> Result<()> {
     if let Some(path) = cmd.get_one::<String>(PATH) {
         let config = configure_scan(cmd);
         let entries = read_strings_from_file(path).await?;
-        let analyzed = analyze(&entries, &config.filter, config.parameter);
+        let analyzed = analyze(entries, &config.filter, config.parameter).await;
         print_analyzed(cmd, analyzed);
     }
     Ok(())
@@ -54,7 +54,7 @@ async fn scan_file(cmd: &ArgMatches) -> Result<()> {
 async fn scan_stdin(cmd: &ArgMatches) -> Result<()> {
     let config = configure_scan(cmd);
     let entries = read_strings_from_stdin().await;
-    let analyzed = analyze(&entries, &config.filter, config.parameter);
+    let analyzed = analyze(entries, &config.filter, config.parameter).await;
 
     print_analyzed(cmd, analyzed);
     Ok(())
