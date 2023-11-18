@@ -46,6 +46,8 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_wrap)]
 pub fn print_groupped<T: Default + Display + Hash + Eq>(
     parameter: LogParameter,
     data: Vec<GrouppedParameter<T>>,
