@@ -27,10 +27,9 @@ pub fn analyze(
     filter: &Criteria,
     parameter: Option<LogParameter>,
 ) -> Vec<LogEntry> {
-    let items = entries
+    entries
         .iter()
-        .group_by(|s| s.contains("pattern: NGINXPROXYACCESS"));
-    items
+        .group_by(|s| s.contains("pattern: NGINXPROXYACCESS"))
         .into_iter()
         .filter_map(|(is_head, g)| if is_head { None } else { Some(g) })
         .enumerate()
