@@ -3,6 +3,7 @@ use clap::builder::PossibleValue;
 use clap::ValueEnum;
 use color_eyre::eyre::{Context, Result};
 use core::hash::Hash;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::path::Path;
 
@@ -31,21 +32,19 @@ pub fn analyze(
         .filter_map(|(is_head, g)| if is_head { None } else { Some(g) })
         .enumerate()
         .filter_map(|(line, g)| {
-            let strings = g.cloned().collect_vec();
+            let h = hash(g);
 
-            let request = read_parameter(&strings, "request");
-            let timestamp = read_parameter(&strings, "timestamp");
-            let agent = read_parameter(&strings, "agent")
-                .trim_matches('"')
-                .to_string();
+            let request = find(&h, "request");
+            let timestamp = find(&h, "timestamp");
+            let agent = find(&h, "agent").trim_matches('"').to_string();
             let timestamp =
                 DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
-            let clientip = read_parameter(&strings, "clientip");
-            let method = read_parameter(&strings, "method");
-            let schema = read_parameter(&strings, "schema");
-            let length = read_parameter(&strings, "length");
-            let status = read_parameter(&strings, "status");
-            let referrer = read_parameter(&strings, "referrer");
+            let clientip = find(&h, "clientip");
+            let method = find(&h, "method");
+            let schema = find(&h, "schema");
+            let length = find(&h, "length");
+            let status = find(&h, "status");
+            let referrer = find(&h, "referrer");
 
             let allow = if let Some(parameter) = parameter {
                 match parameter {
@@ -86,18 +85,25 @@ pub fn analyze(
         .collect_vec()
 }
 
-fn read_parameter(strings: &[String], parameter: &str) -> String {
-    let empty = String::new();
-    let req = strings
-        .iter()
-        .find(|s| s.contains(parameter))
-        .unwrap_or(&empty);
-    let from = req.find(':').unwrap_or_default() + 2;
-    if req.len() <= 2 {
-        empty
+fn find(hash: &HashMap<&str, &str>, parameter: &str) -> String {
+    if let Some(v) = hash.get(parameter) {
+        v.to_string()
     } else {
-        req[from..].to_string()
+        String::new()
     }
+}
+
+fn hash<'a, I>(strings: I) -> HashMap<&'a str, &'a str>
+where
+    I: Iterator<Item = &'a String>,
+{
+    strings
+        .filter_map(|s| {
+            let sep_ix = s.find(':')?;
+            Some((&s[..sep_ix], &s[sep_ix..]))
+        })
+        .map(|(k, v)| (k.trim(), v.trim_matches(|c| c == ':' || c == ' ')))
+        .collect()
 }
 
 /// Reads strings from file specified using `path`.
