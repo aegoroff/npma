@@ -18,6 +18,9 @@ use tokio_stream::StreamExt;
 pub mod console;
 pub mod filter;
 
+const VALUE_SEPARATOR: char = ':';
+const TRIM_VALUE_PATTERN: &[char] = &[VALUE_SEPARATOR, ' '];
+
 #[must_use]
 pub fn analyze(
     entries: &[String],
@@ -99,10 +102,10 @@ where
 {
     strings
         .filter_map(|s| {
-            let sep_ix = s.find(':')?;
+            let sep_ix = s.find(VALUE_SEPARATOR)?;
             Some((&s[..sep_ix], &s[sep_ix..]))
         })
-        .map(|(k, v)| (k.trim(), v.trim_matches(|c| c == ':' || c == ' ')))
+        .map(|(k, v)| (k.trim(), v.trim_matches(TRIM_VALUE_PATTERN)))
         .collect()
 }
 
