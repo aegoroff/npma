@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use clap::{command, Arg, ArgMatches, Command};
 use clap_complete::{generate, Shell};
 use color_eyre::eyre::Result;
@@ -67,6 +68,14 @@ fn print_converted(cmd: &ArgMatches, converted: Vec<LogEntry>) {
             if let Some(param) = cmd.get_one::<LogParameter>("parameter") {
                 match param {
                     LogParameter::Time => group_by(*param, limit, &converted, |e| e.timestamp),
+                    LogParameter::Date => group_by(*param, limit, &converted, |e| {
+                        format!(
+                            "{}-{}-{}",
+                            e.timestamp.year(),
+                            e.timestamp.month(),
+                            e.timestamp.day()
+                        )
+                    }),
                     LogParameter::Agent => group_by(*param, limit, &converted, |e| e.agent.clone()),
                     LogParameter::ClientIp => {
                         group_by(*param, limit, &converted, |e| e.clientip.clone());

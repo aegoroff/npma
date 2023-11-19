@@ -55,6 +55,7 @@ pub fn print_groupped<T: Default + Display + Hash + Eq>(
 ) {
     let parameter_name = match parameter {
         LogParameter::Time => "Time",
+        LogParameter::Date => "Date",
         LogParameter::Agent => "User agent",
         LogParameter::ClientIp => "Client IP",
         LogParameter::Status => "HTTP Status",

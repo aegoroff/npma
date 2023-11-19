@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use chrono::{DateTime, FixedOffset};
 use clap::builder::PossibleValue;
 use clap::ValueEnum;
@@ -163,6 +164,15 @@ impl LogEntry {
                         let s = timestamp.to_string();
                         filter.allow(&s)
                     }
+                    LogParameter::Date => {
+                        let s = format!(
+                            "{}-{}-{}",
+                            timestamp.year(),
+                            timestamp.month(),
+                            timestamp.day()
+                        );
+                        filter.allow(&s)
+                    }
                     LogParameter::Agent => filter.allow(&agent),
                     LogParameter::ClientIp => filter.allow(&clientip),
                     LogParameter::Status => filter.allow(&status),
@@ -207,6 +217,7 @@ pub enum LogParameter {
     #[default]
     Request,
     Referrer,
+    Date,
 }
 
 #[derive(Default, Debug)]
@@ -229,6 +240,7 @@ impl ValueEnum for LogParameter {
     fn value_variants<'a>() -> &'a [Self] {
         &[
             LogParameter::Time,
+            LogParameter::Date,
             LogParameter::Agent,
             LogParameter::ClientIp,
             LogParameter::Status,
@@ -242,6 +254,7 @@ impl ValueEnum for LogParameter {
     fn to_possible_value<'a>(&self) -> Option<PossibleValue> {
         Some(match self {
             LogParameter::Time => PossibleValue::new("time"),
+            LogParameter::Date => PossibleValue::new("date"),
             LogParameter::Agent => PossibleValue::new("agent"),
             LogParameter::ClientIp => PossibleValue::new("client"),
             LogParameter::Status => PossibleValue::new("status"),
