@@ -33,12 +33,14 @@ pub async fn convert<S: Stream<Item = String>>(
     let mut result = entries
         .fold(vec![], |mut v, s| {
             if s.contains("pattern: NGINXPROXYACCESS") {
-                let entry = LogEntry::new(&content, line, filter, parameter);
+                let entry = LogEntry::new(&content, line);
                 content.clear();
                 line += 1;
 
                 if let Some(entry) = entry {
-                    v.push(entry);
+                    if entry.allow(filter, parameter) {
+                        v.push(entry);
+                    }
                 }
             } else if !s.is_empty() && !s.ends_with(VALUE_SEPARATOR) {
                 content.push(s);
@@ -47,9 +49,11 @@ pub async fn convert<S: Stream<Item = String>>(
         })
         .await;
     // Last line
-    let entry = LogEntry::new(&content, line, filter, parameter);
+    let entry = LogEntry::new(&content, line);
     if let Some(entry) = entry {
-        result.push(entry);
+        if entry.allow(filter, parameter) {
+            result.push(entry);
+        }
     }
     result
 }
@@ -135,12 +139,7 @@ pub struct LogEntry {
 
 impl LogEntry {
     #[must_use]
-    pub fn new(
-        content: &[String],
-        line: u64,
-        filter: &Criteria,
-        parameter: Option<LogParameter>,
-    ) -> Option<Self> {
+    pub fn new(content: &[String], line: u64) -> Option<Self> {
         if content.is_empty() {
             None
         } else {
@@ -158,50 +157,45 @@ impl LogEntry {
             let status = find(&h, "status");
             let referrer = find(&h, "referrer");
 
-            let allow = if let Some(parameter) = parameter {
-                match parameter {
-                    LogParameter::Time => {
-                        let s = timestamp.to_string();
-                        filter.allow(&s)
-                    }
-                    LogParameter::Date => {
-                        let s = format!(
-                            "{}-{}-{}",
-                            timestamp.year(),
-                            timestamp.month(),
-                            timestamp.day()
-                        );
-                        filter.allow(&s)
-                    }
-                    LogParameter::Agent => filter.allow(&agent),
-                    LogParameter::ClientIp => filter.allow(&clientip),
-                    LogParameter::Status => filter.allow(&status),
-                    LogParameter::Method => filter.allow(&method),
-                    LogParameter::Schema => filter.allow(&schema),
-                    LogParameter::Request => filter.allow(&request),
-                    LogParameter::Referrer => filter.allow(&referrer),
-                }
-            } else {
-                true
-            };
+            Some(LogEntry {
+                line,
+                request,
+                agent,
+                timestamp,
+                clientip,
+                method,
+                schema,
+                referrer,
+                length: length.parse().unwrap_or_default(),
+                status: status.parse().unwrap_or_default(),
+                ..Default::default()
+            })
+        }
+    }
 
-            if allow {
-                Some(LogEntry {
-                    line,
-                    request,
-                    agent,
-                    timestamp,
-                    clientip,
-                    method,
-                    schema,
-                    referrer,
-                    length: length.parse().unwrap_or_default(),
-                    status: status.parse().unwrap_or_default(),
-                    ..Default::default()
-                })
-            } else {
-                None
+    fn allow(&self, filter: &Criteria, parameter: Option<LogParameter>) -> bool {
+        if let Some(parameter) = parameter {
+            match parameter {
+                LogParameter::Time => filter.allow(&self.timestamp.to_string()),
+                LogParameter::Date => {
+                    let s = format!(
+                        "{}-{}-{}",
+                        self.timestamp.year(),
+                        self.timestamp.month(),
+                        self.timestamp.day()
+                    );
+                    filter.allow(&s)
+                }
+                LogParameter::Agent => filter.allow(&self.agent),
+                LogParameter::ClientIp => filter.allow(&self.clientip),
+                LogParameter::Status => filter.allow(&self.status.to_string()),
+                LogParameter::Method => filter.allow(&self.method),
+                LogParameter::Schema => filter.allow(&self.schema),
+                LogParameter::Request => filter.allow(&self.request),
+                LogParameter::Referrer => filter.allow(&self.referrer),
             }
+        } else {
+            true
         }
     }
 }
