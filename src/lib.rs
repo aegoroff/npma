@@ -21,7 +21,7 @@ const VALUE_SEPARATOR: char = ':';
 const TRIM_VALUE_PATTERN: &[char] = &[VALUE_SEPARATOR, ' '];
 
 #[must_use]
-pub async fn analyze<S: Stream<Item = String>>(
+pub async fn convert<S: Stream<Item = String>>(
     entries: S,
     filter: &Criteria,
     parameter: Option<LogParameter>,

@@ -5,8 +5,8 @@ use core::hash::Hash;
 use indicatif::HumanBytes;
 use itertools::Itertools;
 use npma::{
-    analyze,
     console::{self, print_groupped},
+    convert,
     filter::Criteria,
     read_strings_from_file, read_strings_from_stdin, GrouppedParameter, LogEntry, LogParameter,
 };
@@ -45,8 +45,8 @@ async fn scan_file(cmd: &ArgMatches) -> Result<()> {
     if let Some(path) = cmd.get_one::<String>(PATH) {
         let config = configure_scan(cmd);
         let entries = read_strings_from_file(path).await?;
-        let analyzed = analyze(entries, &config.filter, config.parameter).await;
-        print_analyzed(cmd, analyzed);
+        let converted = convert(entries, &config.filter, config.parameter).await;
+        print_converted(cmd, converted);
     }
     Ok(())
 }
@@ -54,45 +54,45 @@ async fn scan_file(cmd: &ArgMatches) -> Result<()> {
 async fn scan_stdin(cmd: &ArgMatches) -> Result<()> {
     let config = configure_scan(cmd);
     let entries = read_strings_from_stdin();
-    let analyzed = analyze(entries, &config.filter, config.parameter).await;
+    let converted = convert(entries, &config.filter, config.parameter).await;
 
-    print_analyzed(cmd, analyzed);
+    print_converted(cmd, converted);
     Ok(())
 }
 
-fn print_analyzed(cmd: &ArgMatches, analyzed: Vec<LogEntry>) {
+fn print_converted(cmd: &ArgMatches, converted: Vec<LogEntry>) {
     match cmd.subcommand() {
         Some(("g", cmd)) => {
             let limit = cmd.get_one::<usize>("top");
             if let Some(param) = cmd.get_one::<LogParameter>("parameter") {
                 match param {
-                    LogParameter::Time => group_by(*param, limit, &analyzed, |e| e.timestamp),
-                    LogParameter::Agent => group_by(*param, limit, &analyzed, |e| e.agent.clone()),
+                    LogParameter::Time => group_by(*param, limit, &converted, |e| e.timestamp),
+                    LogParameter::Agent => group_by(*param, limit, &converted, |e| e.agent.clone()),
                     LogParameter::ClientIp => {
-                        group_by(*param, limit, &analyzed, |e| e.clientip.clone());
+                        group_by(*param, limit, &converted, |e| e.clientip.clone());
                     }
-                    LogParameter::Status => group_by(*param, limit, &analyzed, |e| e.status),
+                    LogParameter::Status => group_by(*param, limit, &converted, |e| e.status),
                     LogParameter::Method => {
-                        group_by(*param, limit, &analyzed, |e| e.method.clone());
+                        group_by(*param, limit, &converted, |e| e.method.clone());
                     }
                     LogParameter::Schema => {
-                        group_by(*param, limit, &analyzed, |e| e.schema.clone());
+                        group_by(*param, limit, &converted, |e| e.schema.clone());
                     }
                     LogParameter::Request => {
-                        group_by(*param, limit, &analyzed, |e| e.request.clone());
+                        group_by(*param, limit, &converted, |e| e.request.clone());
                     }
                     LogParameter::Referrer => {
-                        group_by(*param, limit, &analyzed, |e| e.referrer.clone());
+                        group_by(*param, limit, &converted, |e| e.referrer.clone());
                     }
                 }
             }
         }
         Some(("t", _)) => {
-            let total_bytes = analyzed.iter().fold(0, |acc, x| acc + x.length);
+            let total_bytes = converted.iter().fold(0, |acc, x| acc + x.length);
             let total_bytes = HumanBytes(total_bytes);
             println!("Total traffic: {total_bytes}");
         }
-        _ => console::print(analyzed.into_iter()),
+        _ => console::print(converted.into_iter()),
     }
 }
 
