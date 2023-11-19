@@ -34,3 +34,6 @@ rstest = "0.18.2"
 lto = true
 strip = true
 panic = 'abort'
+
+[lints.rust]
+unsafe_code = "forbid"
