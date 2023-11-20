@@ -6,10 +6,10 @@ use core::hash::Hash;
 use indicatif::HumanBytes;
 use itertools::Itertools;
 use npma::{
-    console::{self, print_groupped},
+    console::{self, print_grouped},
     convert,
     filter::Criteria,
-    read_strings_from_file, read_strings_from_stdin, GrouppedParameter, LogEntry, LogParameter,
+    read_strings_from_file, read_strings_from_stdin, GroupedParameter, LogEntry, LogParameter,
 };
 use std::{fmt::Display, io};
 
@@ -110,16 +110,16 @@ where
     T: Default + Display + Hash + Eq,
     F: Fn(&LogEntry) -> T,
 {
-    let groupped = data
+    let grouped = data
         .iter()
         .into_group_map_by(|e| f(e))
         .into_iter()
-        .map(|(parameter, grp)| GrouppedParameter {
+        .map(|(parameter, grp)| GroupedParameter {
             parameter,
             count: grp.len(),
         })
         .collect();
-    print_groupped(parameter, groupped, limit);
+    print_grouped(parameter, grouped, limit);
 }
 
 /// Creates application configuration from parsed command line
@@ -164,7 +164,7 @@ fn file_cmd() -> Command {
         .arg(exclude_arg())
         .arg(include_arg())
         .arg(parameter_arg())
-        .subcommand(groupping_cmd())
+        .subcommand(grouping_cmd())
         .subcommand(traffic_cmd())
 }
 
@@ -175,7 +175,7 @@ fn stdin_cmd() -> Command {
         .arg(exclude_arg())
         .arg(include_arg())
         .arg(parameter_arg())
-        .subcommand(groupping_cmd())
+        .subcommand(grouping_cmd())
         .subcommand(traffic_cmd())
 }
 
@@ -210,7 +210,7 @@ fn completion_cmd() -> Command {
         )
 }
 
-fn groupping_cmd() -> Command {
+fn grouping_cmd() -> Command {
     Command::new("g")
         .aliases(["group"])
         .about("Groups log entries using parameter specified. After grouping the number of each group items will be displayed")
@@ -218,7 +218,7 @@ fn groupping_cmd() -> Command {
             arg!(-t --top <NUMBER>)
                 .required(false)
                 .value_parser(value_parser!(usize))
-                .help("Output only specified number of groupped items"),
+                .help("Output only specified number of grouped items"),
         )
         .arg(
             arg!([parameter])
@@ -231,5 +231,5 @@ fn groupping_cmd() -> Command {
 fn traffic_cmd() -> Command {
     Command::new("t")
         .aliases(["traffic"])
-        .about("Sums all log entries length to caclulate all data size passed through proxy")
+        .about("Sums all log entries length to calculate all data size passed through proxy")
 }

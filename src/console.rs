@@ -4,7 +4,7 @@ use core::hash::Hash;
 use itertools::Itertools;
 use std::fmt::Display;
 
-use crate::{calculate_percent, GrouppedParameter, LogEntry, LogParameter};
+use crate::{calculate_percent, GroupedParameter, LogEntry, LogParameter};
 
 /// Prints results table
 pub fn print(data: impl Iterator<Item = LogEntry>) {
@@ -48,9 +48,9 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
 
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_possible_wrap)]
-pub fn print_groupped<T: Default + Display + Hash + Eq>(
+pub fn print_grouped<T: Default + Display + Hash + Eq>(
     parameter: LogParameter,
-    data: Vec<GrouppedParameter<T>>,
+    data: Vec<GroupedParameter<T>>,
     limit: Option<&usize>,
 ) {
     let parameter_name = match parameter {

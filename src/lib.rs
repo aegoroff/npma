@@ -215,7 +215,7 @@ pub enum LogParameter {
 }
 
 #[derive(Default, Debug)]
-pub struct GrouppedParameter<T: Default + Display + Hash + Eq> {
+pub struct GroupedParameter<T: Default + Display + Hash + Eq> {
     pub parameter: T,
     pub count: usize,
 }
