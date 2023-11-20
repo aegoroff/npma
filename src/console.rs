@@ -7,7 +7,7 @@ use std::fmt::Display;
 use crate::{calculate_percent, GrouppedParameter, LogEntry, LogParameter};
 
 /// Prints results table
-pub fn print(data: impl Iterator<Item = LogEntry>) {
+pub fn print(data: impl Iterator<Item=LogEntry>) {
     let mut table = Table::new();
     table
         .load_preset(UTF8_HORIZONTAL_ONLY)
