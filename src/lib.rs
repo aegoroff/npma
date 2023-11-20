@@ -155,7 +155,7 @@ impl LogEntry {
             let schema = find(&h, "schema");
             let length = find(&h, "length");
             let status = find(&h, "status");
-            let referrer = find(&h, "referrer");
+            let referrer = find(&h, "referrer").trim_matches('"').to_string();
 
             Some(LogEntry {
                 line,
