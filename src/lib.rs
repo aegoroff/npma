@@ -108,7 +108,7 @@ where
 {
     let lines = BufReader::new(reader).lines();
     let stream = LinesStream::new(lines);
-    stream.filter_map(std::result::Result::ok).filter(filter)
+    stream.filter_map(Result::ok).filter(filter)
 }
 
 #[must_use]
@@ -155,7 +155,7 @@ impl LogEntry {
             let schema = find(&h, "schema");
             let length = find(&h, "length");
             let status = find(&h, "status");
-            let referrer = find(&h, "referrer").trim_matches('"').to_string();
+            let referrer = find(&h, "referrer");
 
             Some(LogEntry {
                 line,
