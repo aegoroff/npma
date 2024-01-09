@@ -30,31 +30,28 @@ pub async fn convert<S: Stream<Item = String>>(
     let mut content = vec![];
     let mut line: u64 = 0;
 
+    let add_entry = |v: &mut Vec<LogEntry>, entry: Option<LogEntry>| {
+        if let Some(entry) = entry {
+            if entry.allow(filter, parameter) {
+                v.push(entry);
+            }
+        }
+    };
+
     let mut result = entries
         .fold(vec![], |mut v, s| {
             if s.contains("pattern: NGINXPROXYACCESS") {
-                let entry = LogEntry::new(&content, line);
+                add_entry(&mut v, LogEntry::new(&content, line));
                 content.clear();
                 line += 1;
-
-                if let Some(entry) = entry {
-                    if entry.allow(filter, parameter) {
-                        v.push(entry);
-                    }
-                }
-            } else if !s.is_empty() && !s.ends_with(VALUE_SEPARATOR) {
+            } else if !s.ends_with(VALUE_SEPARATOR) {
                 content.push(s);
             }
             v
         })
         .await;
     // Last line
-    let entry = LogEntry::new(&content, line);
-    if let Some(entry) = entry {
-        if entry.allow(filter, parameter) {
-            result.push(entry);
-        }
-    }
+    add_entry(&mut result, LogEntry::new(&content, line));
     result
 }
 
