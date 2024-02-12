@@ -24,8 +24,8 @@ comfy-table = "7.1.0"
 humantime = "2.1.0"
 lazy_static = "1.4.0"
 color-eyre = "0.6.2"
-indicatif = "0.17.7"
-chrono = { version="0.4.33", default-features = false }
+indicatif = "0.17.8"
+chrono = { version="0.4.34", default-features = false }
 
 [dev-dependencies]
 rstest = "0.18.2"
