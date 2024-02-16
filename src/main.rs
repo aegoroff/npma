@@ -70,7 +70,7 @@ fn print_converted(cmd: &ArgMatches, converted: Vec<LogEntry>) {
                     LogParameter::Time => group_by(*param, limit, &converted, |e| e.timestamp),
                     LogParameter::Date => group_by(*param, limit, &converted, |e| {
                         format!(
-                            "{}-{}-{}",
+                            "{}-{:02}-{:02}",
                             e.timestamp.year(),
                             e.timestamp.month(),
                             e.timestamp.day()
