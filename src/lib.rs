@@ -176,7 +176,7 @@ impl LogEntry {
                 LogParameter::Time => filter.allow(&self.timestamp.to_string()),
                 LogParameter::Date => {
                     let s = format!(
-                        "{}-{}-{}",
+                        "{}-{:02}-{:02}",
                         self.timestamp.year(),
                         self.timestamp.month(),
                         self.timestamp.day()
