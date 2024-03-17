@@ -19,6 +19,7 @@ extern crate clap;
 const PATH: &str = "PATH";
 const EXCLUDE_HELP: &str = "Exclude requests that match this pattern";
 const INCLUDE_HELP: &str = "Include only requests that match this pattern";
+const FILTER_PARAMETER_ARG: &str = "parameter";
 
 struct ScanConfiguration {
     filter: Criteria,
@@ -65,7 +66,7 @@ fn print_converted(cmd: &ArgMatches, converted: Vec<LogEntry>) {
     match cmd.subcommand() {
         Some(("g", cmd)) => {
             let limit = cmd.get_one::<usize>("top");
-            if let Some(param) = cmd.get_one::<LogParameter>("parameter") {
+            if let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) {
                 match param {
                     LogParameter::Time => group_by(*param, limit, &converted, |e| e.timestamp),
                     LogParameter::Date => group_by(*param, limit, &converted, |e| {
@@ -126,7 +127,7 @@ where
 fn configure_scan(cmd: &ArgMatches) -> ScanConfiguration {
     let include_pattern = cmd.get_one::<String>("include");
     let exclude_pattern = cmd.get_one::<String>("exclude");
-    let parameter = cmd.get_one::<LogParameter>("parameter").copied();
+    let parameter = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG).copied();
 
     let filter = Criteria::new(include_pattern, exclude_pattern);
     ScanConfiguration { filter, parameter }
@@ -182,14 +183,14 @@ fn stdin_cmd() -> Command {
 fn exclude_arg() -> Arg {
     arg!(-e --exclude <PATTERN>)
         .required(false)
-        .requires("parameter")
+        .requires(FILTER_PARAMETER_ARG)
         .help(EXCLUDE_HELP)
 }
 
 fn include_arg() -> Arg {
     arg!(-i --include <PATTERN>)
         .required(false)
-        .requires("parameter")
+        .requires(FILTER_PARAMETER_ARG)
         .help(INCLUDE_HELP)
 }
 
