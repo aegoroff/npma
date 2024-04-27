@@ -3,6 +3,7 @@ use comfy_table::{Attribute, Cell, ContentArrangement, Table};
 use core::hash::Hash;
 use itertools::Itertools;
 use std::fmt::Display;
+use std::usize;
 
 use crate::{calculate_percent, GroupedParameter, LogEntry, LogParameter};
 
@@ -79,15 +80,7 @@ pub fn print_grouped<T: Default + Display + Hash + Eq>(
 
     data.into_iter()
         .sorted_unstable_by(|a, b| Ord::cmp(&b.count, &a.count))
-        .enumerate()
-        .take_while(|(count, _)| {
-            if let Some(limit) = limit {
-                *limit > *count
-            } else {
-                true
-            }
-        })
-        .map(|(_, entry)| entry)
+        .take(*limit.unwrap_or(&usize::max_value()))
         .for_each(|entry| {
             let percent = calculate_percent(entry.count as i32, total_count as i32);
             table.add_row(vec![
