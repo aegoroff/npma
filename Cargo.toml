@@ -16,8 +16,8 @@ serde_json = "1.0.128"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7.12", features = ["full"] }
 tokio-stream =  { version = "0.1.16", features = ["io-util"] }
-clap = { version = "4.5.18", features = ["std", "color", "suggestions", "cargo"] }
-clap_complete = "4.5.29"
+clap = { version = "4.5.19", features = ["std", "color", "suggestions", "cargo"] }
+clap_complete = "4.5.32"
 itertools = "0.13.0"
 regex = "1.11.0"
 comfy-table = "7.1.1"
