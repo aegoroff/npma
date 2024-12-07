@@ -11,7 +11,7 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
     let mut table = Table::new();
     table
         .load_preset(UTF8_HORIZONTAL_ONLY)
-        .set_header(vec![
+        .set_header([
             Cell::new("#").add_attribute(Attribute::Bold),
             Cell::new("Time").add_attribute(Attribute::Bold),
             Cell::new("Agent").add_attribute(Attribute::Bold),
@@ -26,7 +26,7 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
         .set_content_arrangement(ContentArrangement::Dynamic);
 
     data.for_each(|entry| {
-        table.add_row(vec![
+        table.add_row([
             Cell::new(entry.line),
             Cell::new(entry.timestamp),
             Cell::new(entry.agent),
@@ -68,7 +68,7 @@ pub fn print_grouped<T: Default + Display + Hash + Eq>(
     let mut table = Table::new();
     table
         .load_preset(UTF8_HORIZONTAL_ONLY)
-        .set_header(vec![
+        .set_header([
             Cell::new(parameter_name).add_attribute(Attribute::Bold),
             Cell::new("Count").add_attribute(Attribute::Bold),
             Cell::new("Proportion").add_attribute(Attribute::Bold),
@@ -82,7 +82,7 @@ pub fn print_grouped<T: Default + Display + Hash + Eq>(
         .take(*limit.unwrap_or(&usize::MAX))
         .for_each(|entry| {
             let percent = calculate_percent(entry.count as i32, total_count as i32);
-            table.add_row(vec![
+            table.add_row([
                 Cell::new(entry.parameter),
                 Cell::new(entry.count),
                 Cell::new(format!("{percent:.2}%")),
