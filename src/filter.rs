@@ -20,11 +20,11 @@ impl Criteria {
 
     #[must_use]
     pub fn allow(&self, value: &str) -> bool {
-        Self::match_none_or(&self.include_regex, |r| r.is_match(value))
-            && Self::match_none_or(&self.exclude_regex, |r| !r.is_match(value))
+        Self::match_none_or(self.include_regex.as_ref(), |r| r.is_match(value))
+            && Self::match_none_or(self.exclude_regex.as_ref(), |r| !r.is_match(value))
     }
 
-    fn match_none_or<F: Fn(&Regex) -> bool>(regex: &Option<Regex>, some_match: F) -> bool {
+    fn match_none_or<F: Fn(&Regex) -> bool>(regex: Option<&Regex>, some_match: F) -> bool {
         match regex {
             Some(r) => some_match(r),
             None => true,
