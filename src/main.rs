@@ -16,6 +16,13 @@ use std::{fmt::Display, io};
 #[macro_use]
 extern crate clap;
 
+#[cfg(target_os = "linux")]
+use mimalloc_rust::GlobalMiMalloc;
+
+#[cfg(target_os = "linux")]
+#[global_allocator]
+static GLOBAL_MIMALLOC: GlobalMiMalloc = GlobalMiMalloc;
+
 const PATH: &str = "PATH";
 const EXCLUDE_HELP: &str = "Exclude requests that match this pattern";
 const INCLUDE_HELP: &str = "Include only requests that match this pattern";
