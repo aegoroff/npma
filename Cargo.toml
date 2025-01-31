@@ -23,7 +23,7 @@ indicatif = "0.17.11"
 chrono = { version="0.4.39", default-features = false }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-mimalloc-rust = "=0.2.1"
+mimalloc = "0.1.43"
 
 [dev-dependencies]
 rstest = "0.24.0"
