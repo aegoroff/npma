@@ -13,8 +13,8 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 tokio-stream =  { version = "0.1.17", features = ["io-util"] }
-clap = { version = "4.5.29", features = ["std", "color", "suggestions", "cargo"] }
-clap_complete = "4.5.44"
+clap = { version = "4.5.30", features = ["std", "color", "suggestions", "cargo"] }
+clap_complete = "4.5.45"
 itertools = "0.14.0"
 regex = "1.11.1"
 comfy-table = "7.1.4"
