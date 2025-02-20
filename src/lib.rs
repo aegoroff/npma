@@ -1,7 +1,7 @@
 use chrono::Datelike;
 use chrono::{DateTime, FixedOffset};
-use clap::builder::PossibleValue;
 use clap::ValueEnum;
+use clap::builder::PossibleValue;
 use color_eyre::eyre::{Context, Result};
 use core::hash::Hash;
 use std::collections::HashMap;

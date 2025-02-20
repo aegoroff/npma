@@ -4,7 +4,7 @@ use core::hash::Hash;
 use itertools::Itertools;
 use std::fmt::Display;
 
-use crate::{calculate_percent, GroupedParameter, LogEntry, LogParameter};
+use crate::{GroupedParameter, LogEntry, LogParameter, calculate_percent};
 
 /// Prints results table
 pub fn print(data: impl Iterator<Item = LogEntry>) {

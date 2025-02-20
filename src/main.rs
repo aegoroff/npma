@@ -1,15 +1,16 @@
 use chrono::Datelike;
-use clap::{command, Arg, ArgMatches, Command};
-use clap_complete::{generate, Shell};
+use clap::{Arg, ArgMatches, Command, command};
+use clap_complete::{Shell, generate};
 use color_eyre::eyre::Result;
 use core::hash::Hash;
 use indicatif::HumanBytes;
 use itertools::Itertools;
 use npma::{
+    GroupedParameter, LogEntry, LogParameter,
     console::{self, print_grouped},
     convert,
     filter::Criteria,
-    read_strings_from_file, read_strings_from_stdin, GroupedParameter, LogEntry, LogParameter,
+    read_strings_from_file, read_strings_from_stdin,
 };
 use std::{fmt::Display, io};
 
