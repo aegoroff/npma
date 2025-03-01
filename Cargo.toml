@@ -29,6 +29,7 @@ mimalloc = "0.1.43"
 rstest = "0.24.0"
 
 [profile.release]
+codegen-units = 1
 lto = true
 strip = true
 panic = 'abort'
