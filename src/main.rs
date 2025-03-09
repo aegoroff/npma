@@ -126,8 +126,7 @@ where
         .map(|(parameter, grp)| GroupedParameter {
             parameter,
             count: grp.len(),
-        })
-        .collect();
+        });
     print_grouped(parameter, grouped, limit);
 }
 

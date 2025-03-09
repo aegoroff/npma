@@ -25,8 +25,8 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
         ])
         .set_content_arrangement(ContentArrangement::Dynamic);
 
-    data.for_each(|entry| {
-        table.add_row([
+    let rows = data.map(|entry| {
+        [
             Cell::new(entry.line),
             Cell::new(entry.timestamp),
             Cell::new(entry.agent),
@@ -37,9 +37,10 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
             Cell::new(entry.length),
             Cell::new(entry.request),
             Cell::new(entry.referrer),
-        ]);
+        ]
     });
-    let total = table.row_iter().count();
+    table.add_rows(rows);
+    let total = table.row_count();
     if total > 0 {
         println!("{table}");
         println!("Total items: {total}");
@@ -50,7 +51,7 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
 #[allow(clippy::cast_possible_wrap)]
 pub fn print_grouped<T: Default + Display + Hash + Eq>(
     parameter: LogParameter,
-    data: Vec<GroupedParameter<T>>,
+    data: impl Iterator<Item = GroupedParameter<T>>,
     limit: Option<&usize>,
 ) {
     let parameter_name = match parameter {
@@ -75,20 +76,24 @@ pub fn print_grouped<T: Default + Display + Hash + Eq>(
         ])
         .set_content_arrangement(ContentArrangement::Dynamic);
 
-    let total_count = data.iter().fold(0, |acc, x| acc + x.count);
+    let mut total_count = 0;
 
-    data.into_iter()
-        .sorted_unstable_by(|a, b| Ord::cmp(&b.count, &a.count))
+    data.sorted_unstable_by(|a, b| Ord::cmp(&b.count, &a.count))
         .take(*limit.unwrap_or(&usize::MAX))
         .for_each(|entry| {
-            let percent = calculate_percent(entry.count as i32, total_count as i32);
-            table.add_row([
-                Cell::new(entry.parameter),
-                Cell::new(entry.count),
-                Cell::new(format!("{percent:.2}%")),
-            ]);
+            total_count += entry.count;
+            table.add_row([Cell::new(entry.parameter), Cell::new(entry.count)]);
         });
-    let total = table.row_iter().count();
+
+    for r in table.row_iter_mut() {
+        if let Some(c) = r.cell_iter().nth(1) {
+            if let Ok(count) = c.content().parse() {
+                let percent = calculate_percent(count, total_count as i32);
+                r.add_cell(Cell::new(format!("{percent:.2}%")));
+            }
+        }
+    }
+    let total = table.row_count();
     if total > 0 {
         println!("{table}");
         println!("Total items: {total}");
