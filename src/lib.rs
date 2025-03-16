@@ -109,8 +109,8 @@ impl LogEntry {
         } else {
             let h = hash(content.iter());
 
-            let find = |parameter: &str| {
-                if let Some(v) = h.get(parameter) {
+            let find = |p: &str| {
+                if let Some(v) = h.get(p) {
                     (*v).to_string()
                 } else {
                     String::new()
