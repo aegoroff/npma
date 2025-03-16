@@ -62,14 +62,6 @@ pub async fn convert<S: Stream<Item = String>>(
     result
 }
 
-fn find(hash: &HashMap<&str, &str>, parameter: &str) -> String {
-    if let Some(v) = hash.get(parameter) {
-        (*v).to_string()
-    } else {
-        String::new()
-    }
-}
-
 fn hash<'a, I>(strings: I) -> HashMap<&'a str, &'a str>
 where
     I: Iterator<Item = &'a String>,
@@ -117,17 +109,25 @@ impl LogEntry {
         } else {
             let h = hash(content.iter());
 
-            let request = find(&h, "request");
-            let timestamp = find(&h, "timestamp");
-            let agent = find(&h, "agent").trim_matches('"').to_string();
+            let find = |parameter: &str| {
+                if let Some(v) = h.get(parameter) {
+                    (*v).to_string()
+                } else {
+                    String::new()
+                }
+            };
+
+            let request = find("request");
+            let timestamp = find("timestamp");
+            let agent = find("agent").trim_matches('"').to_string();
             let timestamp =
                 DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
-            let clientip = find(&h, "clientip");
-            let method = find(&h, "method");
-            let schema = find(&h, "schema");
-            let length = find(&h, "length");
-            let status = find(&h, "status");
-            let referrer = find(&h, "referrer");
+            let clientip = find("clientip");
+            let method = find("method");
+            let schema = find("schema");
+            let length = find("length");
+            let status = find("status");
+            let referrer = find("referrer");
 
             Some(LogEntry {
                 line,
