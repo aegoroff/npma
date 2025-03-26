@@ -10,8 +10,11 @@ pub struct Criteria {
 impl Criteria {
     #[must_use]
     pub fn new(include_pattern: Option<&String>, exclude_pattern: Option<&String>) -> Self {
-        let include_regex = Self::create_regexp(include_pattern);
-        let exclude_regex = Self::create_regexp(exclude_pattern);
+        let create_regexp =
+            |pattern: Option<&String>| -> Option<Regex> { Regex::new(pattern?).ok() };
+
+        let include_regex = create_regexp(include_pattern);
+        let exclude_regex = create_regexp(exclude_pattern);
         Self {
             include_regex,
             exclude_regex,
@@ -20,27 +23,13 @@ impl Criteria {
 
     #[must_use]
     pub fn allow(&self, value: &str) -> bool {
-        Self::match_none_or(self.include_regex.as_ref(), |r| r.is_match(value))
-            && Self::match_none_or(self.exclude_regex.as_ref(), |r| !r.is_match(value))
-    }
-
-    fn match_none_or<F: Fn(&Regex) -> bool>(regex: Option<&Regex>, some_match: F) -> bool {
-        match regex {
-            Some(r) => some_match(r),
-            None => true,
-        }
-    }
-
-    fn create_regexp(pattern: Option<&String>) -> Option<Regex> {
-        if let Some(s) = pattern {
-            if let Ok(r) = Regex::new(s) {
-                Some(r)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+        self.include_regex
+            .as_ref()
+            .is_none_or(|r| r.is_match(value))
+            && self
+                .exclude_regex
+                .as_ref()
+                .is_none_or(|r| !r.is_match(value))
     }
 }
 
