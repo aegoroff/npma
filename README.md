@@ -1,6 +1,4 @@
 [![Lines of Code](https://tokei.rs/b1/github/aegoroff/npma?category=code)](https://github.com/XAMPPRocky/tokei)
-[![Crates.io](https://img.shields.io/crates/v/npma)](https://crates.io/crates/npma)
-[![Documentation](https://docs.rs/npma/badge.svg)](https://docs.rs/npma)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Nginx Proxy Manager Access Log Analyzer
@@ -34,12 +32,6 @@ cd npma
 2. Install the tool:
 ```shell
 cargo install --path .
-```
-
-### From Crates.io
-
-```shell
-cargo install npma
 ```
 
 ## Usage
