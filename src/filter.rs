@@ -35,8 +35,6 @@ impl Criteria {
 
 #[cfg(test)]
 mod tests {
-    use rstest::{fixture, rstest};
-
     use super::*;
 
     #[test]
@@ -52,9 +50,10 @@ mod tests {
         assert!(r)
     }
 
-    #[rstest]
-    fn allow_entry_include_match_test(value: &str) {
+    #[test]
+    fn allow_entry_include_match_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(Some(&"a".to_string()), None);
 
         // act
@@ -64,9 +63,10 @@ mod tests {
         assert!(r)
     }
 
-    #[rstest]
-    fn allow_entry_invalid_pattern_test(value: &str) {
+    #[test]
+    fn allow_entry_invalid_pattern_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(Some(&"a[".to_string()), None);
 
         // act
@@ -76,9 +76,10 @@ mod tests {
         assert!(r)
     }
 
-    #[rstest]
-    fn allow_entry_include_not_match_test(value: &str) {
+    #[test]
+    fn allow_entry_include_not_match_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(Some(&"b".to_string()), None);
 
         // act
@@ -88,9 +89,10 @@ mod tests {
         assert!(!r)
     }
 
-    #[rstest]
-    fn allow_entry_exclude_match_test(value: &str) {
+    #[test]
+    fn allow_entry_exclude_match_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(None, Some(&"a".to_string()));
 
         // act
@@ -100,9 +102,10 @@ mod tests {
         assert!(!r)
     }
 
-    #[rstest]
-    fn allow_entry_exclude_not_match_test(value: &str) {
+    #[test]
+    fn allow_entry_exclude_not_match_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(None, Some(&"b".to_string()));
 
         // act
@@ -112,9 +115,10 @@ mod tests {
         assert!(r)
     }
 
-    #[rstest]
-    fn allow_entry_same_pattern_for_both_that_match_request_test(value: &str) {
+    #[test]
+    fn allow_entry_same_pattern_for_both_that_match_request_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(Some(&"a".to_string()), Some(&"a".to_string()));
 
         // act
@@ -124,9 +128,10 @@ mod tests {
         assert!(!r)
     }
 
-    #[rstest]
-    fn allow_entry_same_pattern_for_both_that_not_match_request_test(value: &str) {
+    #[test]
+    fn allow_entry_same_pattern_for_both_that_not_match_request_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(Some(&"b".to_string()), Some(&"b".to_string()));
 
         // act
@@ -136,9 +141,10 @@ mod tests {
         assert!(!r)
     }
 
-    #[rstest]
-    fn allow_entry_different_patterns_for_both_that_match_only_include_test(value: &str) {
+    #[test]
+    fn allow_entry_different_patterns_for_both_that_match_only_include_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(Some(&"a".to_string()), Some(&"b".to_string()));
 
         // act
@@ -148,9 +154,10 @@ mod tests {
         assert!(r)
     }
 
-    #[rstest]
-    fn allow_entry_different_patterns_for_both_that_match_only_exclude_test(value: &str) {
+    #[test]
+    fn allow_entry_different_patterns_for_both_that_match_only_exclude_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(Some(&"b".to_string()), Some(&"a".to_string()));
 
         // act
@@ -160,9 +167,10 @@ mod tests {
         assert!(!r)
     }
 
-    #[rstest]
-    fn allow_entry_different_patterns_for_both_that_not_match_any_pattern_test(value: &str) {
+    #[test]
+    fn allow_entry_different_patterns_for_both_that_not_match_any_pattern_test() {
         // arrange
+        let value = "a";
         let filter = Criteria::new(Some(&"b".to_string()), Some(&"c".to_string()));
 
         // act
@@ -170,10 +178,5 @@ mod tests {
 
         // assert
         assert!(!r)
-    }
-
-    #[fixture]
-    fn value() -> &'static str {
-        "a"
     }
 }

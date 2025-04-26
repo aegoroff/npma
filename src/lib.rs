@@ -234,18 +234,16 @@ impl ValueEnum for LogParameter {
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
+    use test_case::test_case;
 
     use super::*;
 
-    #[rstest]
-    #[case(1, 100, 1.0)]
-    #[case(0, 100, 0.0)]
-    #[case(100, 100, 100.0)]
-    #[case(50, 100, 50.0)]
-    #[case(20, 100, 20.0)]
-    #[trace]
-    fn calculate_percent_tests(#[case] value: i32, #[case] total: i32, #[case] expected: f64) {
+    #[test_case(1, 100, 1.0)]
+    #[test_case(0, 100, 0.0)]
+    #[test_case(100, 100, 100.0)]
+    #[test_case(50, 100, 50.0)]
+    #[test_case(20, 100, 20.0)]
+    fn calculate_percent_tests(value: i32, total: i32, expected: f64) {
         // Arrange
 
         // Act
