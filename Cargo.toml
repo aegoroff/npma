@@ -13,17 +13,17 @@ edition = "2024"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 tokio-stream =  { version = "0.1.17", features = ["io-util"] }
-clap = { version = "4.5.37", features = ["std", "color", "suggestions", "cargo"] }
-clap_complete = "4.5.47"
+clap = { version = "4.5.41", features = ["std", "color", "suggestions", "cargo"] }
+clap_complete = "4.5.55"
 itertools = "0.14.0"
 regex = "1.11.1"
 comfy-table = "7.1.4"
-color-eyre = "0.6.3"
-indicatif = "0.17.11"
-chrono = { version="0.4.40", default-features = false }
+color-eyre = "0.6.5"
+indicatif = "0.18.0"
+chrono = { version="0.4.41", default-features = false }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-mimalloc = "0.1.46"
+mimalloc = "0.1.47"
 
 [dev-dependencies]
 test-case = "3.3.1"
