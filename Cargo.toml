@@ -13,7 +13,7 @@ edition = "2024"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 tokio-stream =  { version = "0.1.17", features = ["io-util"] }
-clap = { version = "4.5.41", features = ["std", "color", "suggestions", "cargo"] }
+clap = { version = "4.5.42", features = ["std", "color", "suggestions", "cargo"] }
 clap_complete = "4.5.55"
 itertools = "0.14.0"
 regex = "1.11.1"
