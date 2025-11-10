@@ -38,10 +38,10 @@ pub async fn convert<S: Stream<Item = String>>(
     let mut line: u64 = 0;
 
     let add_entry = |v: &mut Vec<LogEntry>, entry: Option<LogEntry>| {
-        if let Some(entry) = entry {
-            if entry.allow(filter, parameter) {
-                v.push(entry);
-            }
+        if let Some(entry) = entry
+            && entry.allow(filter, parameter)
+        {
+            v.push(entry);
         }
     };
 

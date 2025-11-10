@@ -86,11 +86,11 @@ pub fn print_grouped<T: Default + Display + Hash + Eq>(
         });
 
     for r in table.row_iter_mut() {
-        if let Some(c) = r.cell_iter().nth(1) {
-            if let Ok(count) = c.content().parse() {
-                let percent = calculate_percent(count, total_count as i32);
-                r.add_cell(Cell::new(format!("{percent:.2}%")));
-            }
+        if let Some(c) = r.cell_iter().nth(1)
+            && let Ok(count) = c.content().parse()
+        {
+            let percent = calculate_percent(count, total_count as i32);
+            r.add_cell(Cell::new(format!("{percent:.2}%")));
         }
     }
     let total = table.row_count();
