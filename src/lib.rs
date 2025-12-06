@@ -24,7 +24,8 @@ const TRIM_VALUE_PATTERN: &[char] = &[VALUE_SEPARATOR, ' '];
 /// Converts a stream of strings into a vector of `LogEntry` instances, applying filtering and parameterization.
 ///
 /// This function takes in a stream of log entries, a filter criteria, and an optional `LogParameter`.
-/// It iterates through the stream, grouping lines together until it encounters a line that starts with "pattern: NGINXPROXYACCESS".
+/// It iterates through the stream, grouping lines together until it encounters a line that
+/// starts with "pattern: NGINXPROXYACCESS".
 /// When such a line is encountered, it adds the accumulated log entry to the result vector and resets the accumulator.
 ///
 /// Finally, after processing all lines, it adds any remaining accumulated log entry to the result vector.
