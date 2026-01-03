@@ -43,7 +43,7 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
     let total = table.row_count();
     if total > 0 {
         println!("{table}");
-        println!("Total items: {total}");
+        println!("Total data: {total}");
     }
 }
 
