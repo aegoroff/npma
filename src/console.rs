@@ -96,6 +96,7 @@ pub fn print_grouped<T: Default + Display + Hash + Eq>(
     let total = table.row_count();
     if total > 0 {
         println!("{table}");
-        println!("Total items: {total}");
+        println!("Total groups:\t{total}");
+        println!("Total data:\t{total_count}");
     }
 }
