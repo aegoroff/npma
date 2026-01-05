@@ -96,7 +96,14 @@ pub fn print_grouped<T: Default + Display + Hash + Eq>(
     let total = table.row_count();
     if total > 0 {
         println!("{table}");
-        println!("Total groups:\t{total}");
-        println!("Total data:\t{total_count}");
+        let group = if parameter_name.chars().last().unwrap_or_default() == 's' {
+            format!("{parameter_name}es")
+        } else {
+            format!("{parameter_name}s")
+        };
+        let spaces = group.len() - 4;
+        let spacer = " ".repeat(spaces);
+        println!("Total {group}:\t{total}");
+        println!("Total data:{spacer}\t{total_count}");
     }
 }
