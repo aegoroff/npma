@@ -101,8 +101,7 @@ pub fn print_grouped<T: Default + Display + Hash + Eq>(
         } else {
             format!("{parameter_name}s")
         };
-        let spaces = group.len() - 4;
-        let spacer = " ".repeat(spaces);
+        let spacer = " ".repeat(group.len() - 4); // 4 is data len
         println!("Total {group}:\t{total}");
         println!("Total data:{spacer}\t{total_count}");
     }
