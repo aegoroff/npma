@@ -4,7 +4,6 @@ use clap::{
 };
 use clap_complete::{Shell, generate};
 use color_eyre::eyre::Result;
-use core::hash::Hash;
 use indicatif::HumanBytes;
 use npma::{
     GroupedParameter, LogEntry, LogParameter,
@@ -13,8 +12,8 @@ use npma::{
     filter::Criteria,
     read_strings_from_file, read_strings_from_stdin,
 };
-use std::{collections::HashMap, pin::pin};
-use std::{fmt::Display, io};
+use std::io;
+use std::{borrow::Cow, collections::HashMap, pin::pin};
 use tokio_stream::{self, Stream, StreamExt};
 
 #[cfg(target_os = "linux")]
@@ -92,16 +91,15 @@ async fn handle_group(cmd: &ArgMatches, stream: impl Stream<Item = LogEntry> + U
     let collected: Vec<LogEntry> = stream.collect().await;
     let limit = cmd.get_one::<usize>("top");
     if let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) {
-        group_by(*param, limit, &collected, |e| param.extract(e).into_owned());
+        group_by(*param, limit, &collected, |e| param.extract(e));
     }
 }
 
-fn group_by<T, F>(parameter: LogParameter, limit: Option<&usize>, data: &[LogEntry], f: F)
+fn group_by<F>(parameter: LogParameter, limit: Option<&usize>, data: &[LogEntry], f: F)
 where
-    T: Display + Hash + Eq,
-    F: Fn(&LogEntry) -> T,
+    F: Fn(&LogEntry) -> Cow<'_, str>,
 {
-    let mut counts: HashMap<T, u64> = HashMap::new();
+    let mut counts: HashMap<Cow<'_, str>, u64> = HashMap::new();
     for entry in data {
         *counts.entry(f(entry)).or_insert(0) += 1;
     }
