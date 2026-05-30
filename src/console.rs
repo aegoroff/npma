@@ -1,7 +1,6 @@
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Cell, ContentArrangement, Table};
 use core::hash::Hash;
-use itertools::Itertools;
 use std::fmt::Display;
 use std::pin::pin;
 use tokio_stream::Stream;
@@ -82,7 +81,9 @@ pub fn print_grouped<T: Display + Hash + Eq>(
 
     let mut total_count = 0u64;
 
-    data.sorted_unstable_by(|a, b| Ord::cmp(&b.count, &a.count))
+    let mut data: Vec<_> = data.collect();
+    data.sort_unstable_by(|a, b| Ord::cmp(&b.count, &a.count));
+    data.into_iter()
         .take(*limit.unwrap_or(&usize::MAX))
         .for_each(|entry| {
             total_count += entry.count;

@@ -6,7 +6,6 @@ use clap_complete::{Shell, generate};
 use color_eyre::eyre::Result;
 use core::hash::Hash;
 use indicatif::HumanBytes;
-use itertools::Itertools;
 use npma::{
     GroupedParameter, LogEntry, LogParameter,
     console::{self, print_grouped},
@@ -14,7 +13,7 @@ use npma::{
     filter::Criteria,
     read_strings_from_file, read_strings_from_stdin,
 };
-use std::pin::pin;
+use std::{collections::HashMap, pin::pin};
 use std::{fmt::Display, io};
 use tokio_stream::{self, Stream, StreamExt};
 
@@ -102,17 +101,17 @@ where
     T: Display + Hash + Eq,
     F: Fn(&LogEntry) -> T,
 {
-    let grouped = data
-        .iter()
-        .into_group_map_by(|e| f(e))
+    let mut counts: HashMap<T, u64> = HashMap::new();
+    for entry in data {
+        *counts.entry(f(entry)).or_insert(0) += 1;
+    }
+
+    let grouped = counts
         .into_iter()
-        .map(|(parameter, grp)| GroupedParameter {
-            parameter,
-            count: grp.len() as u64,
-        });
+        .map(|(parameter, count)| GroupedParameter { parameter, count });
+
     print_grouped(parameter, grouped, limit);
 }
-
 /// Creates application configuration from parsed command line
 fn configure_scan(cmd: &ArgMatches) -> ScanConfiguration {
     let include_pattern = cmd.get_one::<String>("include");
