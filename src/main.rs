@@ -1,4 +1,3 @@
-use chrono::Datelike;
 use clap::{Arg, ArgMatches, Command, command};
 use clap_complete::{Shell, generate};
 use color_eyre::eyre::Result;
@@ -91,30 +90,12 @@ fn handle_group(cmd: &ArgMatches, converted: &[LogEntry]) {
     let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) else {
         return;
     };
-
-    match param {
-        LogParameter::Time => group_by(*param, limit, converted, |e| e.timestamp),
-        LogParameter::Date => group_by(*param, limit, converted, |e| {
-            format!(
-                "{}-{:02}-{:02}",
-                e.timestamp.year(),
-                e.timestamp.month(),
-                e.timestamp.day()
-            )
-        }),
-        LogParameter::Agent => group_by(*param, limit, converted, |e| e.agent.clone()),
-        LogParameter::ClientIp => group_by(*param, limit, converted, |e| e.clientip.clone()),
-        LogParameter::Status => group_by(*param, limit, converted, |e| e.status),
-        LogParameter::Method => group_by(*param, limit, converted, |e| e.method.clone()),
-        LogParameter::Schema => group_by(*param, limit, converted, |e| e.schema.clone()),
-        LogParameter::Request => group_by(*param, limit, converted, |e| e.request.clone()),
-        LogParameter::Referrer => group_by(*param, limit, converted, |e| e.referrer.clone()),
-    }
+    group_by(*param, limit, converted, |e| param.extract(e).into_owned());
 }
 
 fn group_by<T, F>(parameter: LogParameter, limit: Option<&usize>, data: &[LogEntry], f: F)
 where
-    T: Default + Display + Hash + Eq,
+    T: Display + Hash + Eq,
     F: Fn(&LogEntry) -> T,
 {
     let grouped = data

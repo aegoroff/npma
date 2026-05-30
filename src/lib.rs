@@ -169,8 +169,8 @@ impl LogParameter {
     }
 }
 
-#[derive(Default, Debug)]
-pub struct GroupedParameter<T: Default + Display + Hash + Eq> {
+#[derive(Debug)]
+pub struct GroupedParameter<T: Display + Hash + Eq> {
     pub parameter: T,
     pub count: usize,
 }

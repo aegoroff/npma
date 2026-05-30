@@ -49,7 +49,7 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
 
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_possible_wrap)]
-pub fn print_grouped<T: Default + Display + Hash + Eq>(
+pub fn print_grouped<T: Display + Hash + Eq>(
     parameter: LogParameter,
     data: impl Iterator<Item = GroupedParameter<T>>,
     limit: Option<&usize>,
