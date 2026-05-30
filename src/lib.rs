@@ -22,38 +22,49 @@ const VALUE_SEPARATOR: char = ':';
 const TRIM_VALUE_PATTERN: &[char] = &[VALUE_SEPARATOR, ' '];
 
 struct EntryParser {
-    buffer: Vec<String>,
+    current: LogEntry,
     line: u64,
+    started: bool,
 }
 
 impl EntryParser {
     fn new() -> Self {
         Self {
-            buffer: vec![],
+            current: LogEntry {
+                line: 0,
+                ..Default::default()
+            },
             line: 0,
+            started: false,
         }
     }
 
-    fn push(&mut self, s: String) -> Option<LogEntry> {
+    fn push(&mut self, s: &str) -> Option<LogEntry> {
         if s.contains("pattern: NGINXPROXYACCESS") {
-            let entry = LogEntry::new(&self.buffer, self.line);
-            self.buffer.clear();
+            let prev_started = self.started;
+            self.started = true;
             self.line += 1;
-            entry
+            let entry = std::mem::replace(
+                &mut self.current,
+                LogEntry {
+                    line: self.line,
+                    ..Default::default()
+                },
+            );
+            if prev_started { Some(entry) } else { None }
         } else if !s.ends_with(VALUE_SEPARATOR) {
-            self.buffer.push(s);
+            self.current.apply_line(s);
             None
         } else {
             None
         }
     }
 
-    /// Last uncompleted entry
-    fn finish(&mut self) -> Option<LogEntry> {
-        if self.buffer.is_empty() {
-            None
+    fn finish(self) -> Option<LogEntry> {
+        if self.started && !self.current.request.is_empty() {
+            Some(self.current)
         } else {
-            LogEntry::new(&self.buffer, self.line)
+            None
         }
     }
 }
@@ -79,7 +90,7 @@ where
         let mut pinned = std::pin::pin!(input);
 
         while let Some(line) = pinned.next().await {
-            if let Some(entry) = parser.push(line)
+            if let Some(entry) = parser.push(&line)
                 && entry.allow(filter, parameter) {
                     yield entry;
                 }
@@ -119,42 +130,27 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
-    #[must_use]
-    pub fn new(content: &[String], line: u64) -> Option<Self> {
-        if content.is_empty() {
-            return None;
-        }
-
-        let mut entry = LogEntry {
-            line,
-            ..Default::default()
+    fn apply_line(&mut self, s: &str) {
+        let Some(sep_ix) = s.find(VALUE_SEPARATOR) else {
+            return;
         };
-
-        for s in content {
-            let Some(sep_ix) = s.find(VALUE_SEPARATOR) else {
-                continue;
-            };
-            let key = s[..sep_ix].trim();
-            let value = s[sep_ix..].trim_matches(TRIM_VALUE_PATTERN);
-
-            match key {
-                "request" => entry.request = value.to_string(),
-                "timestamp" => {
-                    entry.timestamp =
-                        DateTime::parse_from_str(value, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
-                }
-                "agent" => entry.agent = value.trim_matches('"').to_string(),
-                "clientip" => entry.clientip = value.to_string(),
-                "method" => entry.method = value.to_string(),
-                "schema" => entry.schema = value.to_string(),
-                "length" => entry.length = value.parse().unwrap_or_default(),
-                "status" => entry.status = value.parse().unwrap_or_default(),
-                "referrer" => entry.referrer = value.to_string(),
-                _ => {}
+        let key = s[..sep_ix].trim();
+        let value = s[sep_ix..].trim_matches(TRIM_VALUE_PATTERN);
+        match key {
+            "request" => self.request = value.to_string(),
+            "timestamp" => {
+                self.timestamp =
+                    DateTime::parse_from_str(value, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
             }
+            "agent" => self.agent = value.trim_matches('"').to_string(),
+            "clientip" => self.clientip = value.to_string(),
+            "method" => self.method = value.to_string(),
+            "schema" => self.schema = value.to_string(),
+            "length" => self.length = value.parse().unwrap_or_default(),
+            "status" => self.status = value.parse().unwrap_or_default(),
+            "referrer" => self.referrer = value.to_string(),
+            _ => {}
         }
-
-        Some(entry)
     }
 
     fn allow(&self, filter: &Criteria, parameter: Option<LogParameter>) -> bool {
