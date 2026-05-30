@@ -64,11 +64,11 @@ pub async fn convert<S: Stream<Item = String>>(
 }
 
 #[must_use]
-pub fn calculate_percent(value: i32, total: i32) -> f64 {
+pub fn calculate_percent(value: u64, total: u64) -> f64 {
     if total == 0 {
         0_f64
     } else {
-        (f64::from(value) / f64::from(total)) * 100_f64
+        (value as f64 / total as f64) * 100_f64
     }
 }
 
@@ -172,7 +172,7 @@ impl LogParameter {
 #[derive(Debug)]
 pub struct GroupedParameter<T: Display + Hash + Eq> {
     pub parameter: T,
-    pub count: usize,
+    pub count: u64,
 }
 
 impl Display for LogParameter {
@@ -226,7 +226,7 @@ mod tests {
     #[test_case(100, 100, 100.0)]
     #[test_case(50, 100, 50.0)]
     #[test_case(20, 100, 20.0)]
-    fn calculate_percent_tests(value: i32, total: i32, expected: f64) {
+    fn calculate_percent_tests(value: u64, total: u64, expected: f64) {
         // Arrange
 
         // Act

@@ -103,7 +103,7 @@ where
         .into_iter()
         .map(|(parameter, grp)| GroupedParameter {
             parameter,
-            count: grp.len(),
+            count: grp.len() as u64,
         });
     print_grouped(parameter, grouped, limit);
 }

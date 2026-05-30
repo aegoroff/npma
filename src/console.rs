@@ -76,7 +76,7 @@ pub fn print_grouped<T: Display + Hash + Eq>(
         ])
         .set_content_arrangement(ContentArrangement::Dynamic);
 
-    let mut total_count = 0;
+    let mut total_count = 0u64;
 
     data.sorted_unstable_by(|a, b| Ord::cmp(&b.count, &a.count))
         .take(*limit.unwrap_or(&usize::MAX))
@@ -89,7 +89,7 @@ pub fn print_grouped<T: Display + Hash + Eq>(
         if let Some(c) = r.cell_iter().nth(1)
             && let Ok(count) = c.content().parse()
         {
-            let percent = calculate_percent(count, total_count as i32);
+            let percent = calculate_percent(count, total_count);
             r.add_cell(Cell::new(format!("{percent:.2}%")));
         }
     }
