@@ -148,6 +148,7 @@ pub enum LogParameter {
 }
 
 impl LogParameter {
+    #[must_use]
     pub fn extract<'a>(&self, entry: &'a LogEntry) -> Cow<'a, str> {
         match self {
             LogParameter::Agent => Cow::Borrowed(&entry.agent),
