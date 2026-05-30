@@ -13,6 +13,7 @@ use npma::{
     read_strings_from_file, read_strings_from_stdin,
 };
 use std::{fmt::Display, io};
+use tokio_stream::{self, Stream};
 
 #[macro_use]
 extern crate clap;
@@ -53,19 +54,20 @@ async fn main() -> Result<()> {
 
 async fn scan_file(cmd: &ArgMatches) -> Result<()> {
     if let Some(path) = cmd.get_one::<String>(PATH) {
-        let config = configure_scan(cmd);
         let entries = read_strings_from_file(path).await?;
-        let converted = convert(entries, &config.filter, config.parameter).await;
-        print_converted(cmd, converted);
+        scan(Box::pin(entries), cmd).await?;
     }
     Ok(())
 }
 
 async fn scan_stdin(cmd: &ArgMatches) -> Result<()> {
-    let config = configure_scan(cmd);
     let entries = read_strings_from_stdin();
-    let converted = convert(entries, &config.filter, config.parameter).await;
+    scan(entries, cmd).await
+}
 
+async fn scan(entries: impl Stream<Item = String> + Unpin, cmd: &ArgMatches) -> Result<()> {
+    let config = configure_scan(cmd);
+    let converted = convert(entries, &config.filter, config.parameter).await;
     print_converted(cmd, converted);
     Ok(())
 }
@@ -106,7 +108,7 @@ fn print_converted(cmd: &ArgMatches, converted: Vec<LogEntry>) {
             }
         }
         Some(("t", _)) => {
-            let total_bytes = converted.iter().fold(0, |acc, x| acc + x.length);
+            let total_bytes = converted.iter().map(|x| x.length).sum();
             let total_bytes = HumanBytes(total_bytes);
             println!("Total traffic: {total_bytes}");
         }
