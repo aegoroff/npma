@@ -15,10 +15,10 @@ use tokio_stream::{Stream, StreamExt};
 ///
 /// This function will return an error if file specified by `path` cannot be opened or not exist.
 pub async fn read_strings_from_file<P: AsRef<Path>>(path: P) -> Result<impl Stream<Item = String>> {
-    let path = path.as_ref().to_str().unwrap_or_default();
+    let path = path.as_ref();
     let file = File::open(path)
         .await
-        .wrap_err_with(|| format!("Log file '{path}' cannot be opened"))?;
+        .wrap_err_with(|| format!("Log file '{}' cannot be opened", path.display()))?;
     Ok(read_not_empty_strings_from(file))
 }
 
@@ -31,9 +31,11 @@ fn read_not_empty_strings_from<R: AsyncRead + Unpin>(reader: R) -> impl Stream<I
     read_strings_from(reader, |entry| !entry.is_empty())
 }
 
-fn read_strings_from<R, F>(reader: R, filter: F) -> impl Stream<Item = String>
+fn read_strings_from<R>(
+    reader: R,
+    filter: impl FnMut(&String) -> bool,
+) -> impl Stream<Item = String>
 where
-    F: FnMut(&String) -> bool,
     R: AsyncRead + Unpin,
 {
     let lines = BufReader::new(reader).lines();
@@ -88,6 +90,20 @@ mod tests {
         // Assert
         assert_eq!("a", result.next().await.unwrap());
         assert_eq!("", result.next().await.unwrap());
+        assert_eq!("b", result.next().await.unwrap());
+        assert!(result.next().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn read_not_empty_strings_from_some_empty_windows_line_endings() {
+        // Arrange
+        let cursor = Cursor::new(b"a\r\n\r\nb");
+
+        // Act
+        let mut result = read_not_empty_strings_from(cursor);
+
+        // Assert
+        assert_eq!("a", result.next().await.unwrap());
         assert_eq!("b", result.next().await.unwrap());
         assert!(result.next().await.is_none());
     }
