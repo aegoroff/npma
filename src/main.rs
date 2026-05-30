@@ -75,45 +75,40 @@ async fn scan(entries: impl Stream<Item = String> + Unpin, cmd: &ArgMatches) -> 
 
 fn print_converted(cmd: &ArgMatches, converted: Vec<LogEntry>) {
     match cmd.subcommand() {
-        Some(("g", cmd)) => {
-            let limit = cmd.get_one::<usize>("top");
-            if let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) {
-                match param {
-                    LogParameter::Time => group_by(*param, limit, &converted, |e| e.timestamp),
-                    LogParameter::Date => group_by(*param, limit, &converted, |e| {
-                        format!(
-                            "{}-{:02}-{:02}",
-                            e.timestamp.year(),
-                            e.timestamp.month(),
-                            e.timestamp.day()
-                        )
-                    }),
-                    LogParameter::Agent => group_by(*param, limit, &converted, |e| e.agent.clone()),
-                    LogParameter::ClientIp => {
-                        group_by(*param, limit, &converted, |e| e.clientip.clone());
-                    }
-                    LogParameter::Status => group_by(*param, limit, &converted, |e| e.status),
-                    LogParameter::Method => {
-                        group_by(*param, limit, &converted, |e| e.method.clone());
-                    }
-                    LogParameter::Schema => {
-                        group_by(*param, limit, &converted, |e| e.schema.clone());
-                    }
-                    LogParameter::Request => {
-                        group_by(*param, limit, &converted, |e| e.request.clone());
-                    }
-                    LogParameter::Referrer => {
-                        group_by(*param, limit, &converted, |e| e.referrer.clone());
-                    }
-                }
-            }
-        }
-        Some(("t", _)) => {
-            let total_bytes = converted.iter().map(|x| x.length).sum();
-            let total_bytes = HumanBytes(total_bytes);
-            println!("Total traffic: {total_bytes}");
-        }
+        Some(("g", cmd)) => handle_group(cmd, &converted),
+        Some(("t", _)) => handle_traffic(&converted),
         _ => console::print(converted.into_iter()),
+    }
+}
+
+fn handle_traffic(converted: &[LogEntry]) {
+    let total_bytes: u64 = converted.iter().map(|x| x.length).sum();
+    println!("Total traffic: {}", HumanBytes(total_bytes));
+}
+
+fn handle_group(cmd: &ArgMatches, converted: &[LogEntry]) {
+    let limit = cmd.get_one::<usize>("top");
+    let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) else {
+        return;
+    };
+
+    match param {
+        LogParameter::Time => group_by(*param, limit, converted, |e| e.timestamp),
+        LogParameter::Date => group_by(*param, limit, converted, |e| {
+            format!(
+                "{}-{:02}-{:02}",
+                e.timestamp.year(),
+                e.timestamp.month(),
+                e.timestamp.day()
+            )
+        }),
+        LogParameter::Agent => group_by(*param, limit, converted, |e| e.agent.clone()),
+        LogParameter::ClientIp => group_by(*param, limit, converted, |e| e.clientip.clone()),
+        LogParameter::Status => group_by(*param, limit, converted, |e| e.status),
+        LogParameter::Method => group_by(*param, limit, converted, |e| e.method.clone()),
+        LogParameter::Schema => group_by(*param, limit, converted, |e| e.schema.clone()),
+        LogParameter::Request => group_by(*param, limit, converted, |e| e.request.clone()),
+        LogParameter::Referrer => group_by(*param, limit, converted, |e| e.referrer.clone()),
     }
 }
 
