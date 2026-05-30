@@ -1,4 +1,7 @@
-use clap::{Arg, ArgMatches, Command, command};
+use clap::{
+    Arg, ArgMatches, Command, arg, command, crate_authors, crate_description, crate_name,
+    crate_version, value_parser,
+};
 use clap_complete::{Shell, generate};
 use color_eyre::eyre::Result;
 use core::hash::Hash;
@@ -14,9 +17,6 @@ use npma::{
 use std::pin::pin;
 use std::{fmt::Display, io};
 use tokio_stream::{self, Stream};
-
-#[macro_use]
-extern crate clap;
 
 #[cfg(target_os = "linux")]
 use mimalloc::MiMalloc;
