@@ -13,7 +13,7 @@ use npma::{
     read_strings_from_file, read_strings_from_stdin,
 };
 use std::io;
-use std::{borrow::Cow, collections::HashMap, pin::pin};
+use std::{collections::HashMap, pin::pin};
 use tokio_stream::{self, Stream, StreamExt};
 
 #[cfg(target_os = "linux")]
@@ -87,29 +87,23 @@ async fn handle_traffic(mut entries: impl Stream<Item = LogEntry> + Unpin) {
     println!("Total traffic: {}", HumanBytes(total_bytes));
 }
 
-async fn handle_group(cmd: &ArgMatches, stream: impl Stream<Item = LogEntry> + Unpin) {
-    let collected: Vec<LogEntry> = stream.collect().await;
+async fn handle_group(cmd: &ArgMatches, mut stream: impl Stream<Item = LogEntry> + Unpin) {
     let limit = cmd.get_one::<usize>("top");
     if let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) {
-        group_by(*param, limit, &collected, |e| param.extract(e));
+        let mut counts: HashMap<String, u64> = HashMap::new();
+        while let Some(entry) = stream.next().await {
+            let key = param.extract(&entry).into_owned();
+            *counts.entry(key).or_insert(0) += 1;
+        }
+
+        let grouped = counts
+            .into_iter()
+            .map(|(parameter, count)| GroupedParameter { parameter, count });
+
+        print_grouped(*param, grouped, limit);
     }
 }
 
-fn group_by<F>(parameter: LogParameter, limit: Option<&usize>, data: &[LogEntry], f: F)
-where
-    F: Fn(&LogEntry) -> Cow<'_, str>,
-{
-    let mut counts: HashMap<Cow<'_, str>, u64> = HashMap::new();
-    for entry in data {
-        *counts.entry(f(entry)).or_insert(0) += 1;
-    }
-
-    let grouped = counts
-        .into_iter()
-        .map(|(parameter, count)| GroupedParameter { parameter, count });
-
-    print_grouped(parameter, grouped, limit);
-}
 /// Creates application configuration from parsed command line
 fn configure_scan(cmd: &ArgMatches) -> ScanConfiguration {
     let include_pattern = cmd.get_one::<String>("include");
