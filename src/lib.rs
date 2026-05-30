@@ -93,49 +93,39 @@ impl LogEntry {
     #[must_use]
     pub fn new(content: &[String], line: u64) -> Option<Self> {
         if content.is_empty() {
-            None
-        } else {
-            let find = |p: &str| -> String {
-                content
-                    .iter()
-                    .find_map(|s| {
-                        let sep_ix = s.find(VALUE_SEPARATOR)?;
-                        let key = s[..sep_ix].trim();
-                        if key == p {
-                            Some(s[sep_ix..].trim_matches(TRIM_VALUE_PATTERN).to_string())
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or_default()
-            };
-
-            let request = find("request");
-            let timestamp = find("timestamp");
-            let agent = find("agent").trim_matches('"').to_string();
-            let timestamp =
-                DateTime::parse_from_str(&timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
-            let clientip = find("clientip");
-            let method = find("method");
-            let schema = find("schema");
-            let length = find("length");
-            let status = find("status");
-            let referrer = find("referrer");
-
-            Some(LogEntry {
-                line,
-                request,
-                agent,
-                timestamp,
-                clientip,
-                method,
-                schema,
-                referrer,
-                length: length.parse().unwrap_or_default(),
-                status: status.parse().unwrap_or_default(),
-                ..Default::default()
-            })
+            return None;
         }
+
+        let mut entry = LogEntry {
+            line,
+            ..Default::default()
+        };
+
+        for s in content {
+            let Some(sep_ix) = s.find(VALUE_SEPARATOR) else {
+                continue;
+            };
+            let key = s[..sep_ix].trim();
+            let value = s[sep_ix..].trim_matches(TRIM_VALUE_PATTERN);
+
+            match key {
+                "request" => entry.request = value.to_string(),
+                "timestamp" => {
+                    entry.timestamp =
+                        DateTime::parse_from_str(value, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
+                }
+                "agent" => entry.agent = value.trim_matches('"').to_string(),
+                "clientip" => entry.clientip = value.to_string(),
+                "method" => entry.method = value.to_string(),
+                "schema" => entry.schema = value.to_string(),
+                "length" => entry.length = value.parse().unwrap_or_default(),
+                "status" => entry.status = value.parse().unwrap_or_default(),
+                "referrer" => entry.referrer = value.to_string(),
+                _ => {}
+            }
+        }
+
+        Some(entry)
     }
 
     fn allow(&self, filter: &Criteria, parameter: Option<LogParameter>) -> bool {
