@@ -115,8 +115,8 @@ fn configure_scan(cmd: &ArgMatches) -> ScanConfiguration {
     let parameter = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG).copied();
 
     let filter = Criteria::new(
-        include_pattern.map(std::string::String::as_str),
-        exclude_pattern.map(std::string::String::as_str),
+        include_pattern.map(String::as_str),
+        exclude_pattern.map(String::as_str),
     );
     ScanConfiguration { filter, parameter }
 }
