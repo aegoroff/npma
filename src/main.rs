@@ -12,6 +12,7 @@ use npma::{
     filter::Criteria,
     read_strings_from_file, read_strings_from_stdin,
 };
+use std::pin::pin;
 use std::{fmt::Display, io};
 use tokio_stream::{self, Stream};
 
@@ -55,7 +56,7 @@ async fn main() -> Result<()> {
 async fn scan_file(cmd: &ArgMatches) -> Result<()> {
     if let Some(path) = cmd.get_one::<String>(PATH) {
         let entries = read_strings_from_file(path).await?;
-        scan(Box::pin(entries), cmd).await?;
+        scan(pin!(entries), cmd).await?;
     }
     Ok(())
 }
