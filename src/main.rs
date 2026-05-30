@@ -93,7 +93,7 @@ async fn handle_group(cmd: &ArgMatches, mut stream: impl Stream<Item = LogEntry>
         let mut counts: HashMap<String, u64> = HashMap::new();
         while let Some(entry) = stream.next().await {
             let key = param.extract(&entry).into_owned();
-            *counts.entry(key).or_insert(0) += 1;
+            counts.entry(key).and_modify(|c| *c += 1).or_insert(1);
         }
 
         let grouped = counts
