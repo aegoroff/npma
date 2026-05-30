@@ -158,7 +158,7 @@ pub enum LogParameter {
 }
 
 impl LogParameter {
-    pub fn extract<'a>(&self, entry: &'a LogEntry) -> std::borrow::Cow<'a, str> {
+    pub fn extract<'a>(&self, entry: &'a LogEntry) -> Cow<'a, str> {
         match self {
             LogParameter::Agent => Cow::Borrowed(&entry.agent),
             LogParameter::ClientIp => Cow::Borrowed(&entry.clientip),
