@@ -114,7 +114,10 @@ fn configure_scan(cmd: &ArgMatches) -> ScanConfiguration {
     let exclude_pattern = cmd.get_one::<String>("exclude");
     let parameter = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG).copied();
 
-    let filter = Criteria::new(include_pattern, exclude_pattern);
+    let filter = Criteria::new(
+        include_pattern.map(std::string::String::as_str),
+        exclude_pattern.map(std::string::String::as_str),
+    );
     ScanConfiguration { filter, parameter }
 }
 

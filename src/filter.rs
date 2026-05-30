@@ -9,9 +9,8 @@ pub struct Criteria {
 
 impl Criteria {
     #[must_use]
-    pub fn new(include_pattern: Option<&String>, exclude_pattern: Option<&String>) -> Self {
-        let create_regexp =
-            |pattern: Option<&String>| -> Option<Regex> { Regex::new(pattern?).ok() };
+    pub fn new(include_pattern: Option<&str>, exclude_pattern: Option<&str>) -> Self {
+        let create_regexp = |pattern: Option<&str>| -> Option<Regex> { Regex::new(pattern?).ok() };
 
         let include_regex = create_regexp(include_pattern);
         let exclude_regex = create_regexp(exclude_pattern);
@@ -54,7 +53,7 @@ mod tests {
     fn allow_entry_include_match_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(Some(&"a".to_string()), None);
+        let filter = Criteria::new(Some("a"), None);
 
         // act
         let r = filter.allow(value);
@@ -67,7 +66,7 @@ mod tests {
     fn allow_entry_invalid_pattern_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(Some(&"a[".to_string()), None);
+        let filter = Criteria::new(Some("a["), None);
 
         // act
         let r = filter.allow(value);
@@ -80,7 +79,7 @@ mod tests {
     fn allow_entry_include_not_match_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(Some(&"b".to_string()), None);
+        let filter = Criteria::new(Some("b"), None);
 
         // act
         let r = filter.allow(value);
@@ -93,7 +92,7 @@ mod tests {
     fn allow_entry_exclude_match_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(None, Some(&"a".to_string()));
+        let filter = Criteria::new(None, Some("a"));
 
         // act
         let r = filter.allow(value);
@@ -106,7 +105,7 @@ mod tests {
     fn allow_entry_exclude_not_match_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(None, Some(&"b".to_string()));
+        let filter = Criteria::new(None, Some("b"));
 
         // act
         let r = filter.allow(value);
@@ -119,7 +118,7 @@ mod tests {
     fn allow_entry_same_pattern_for_both_that_match_request_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(Some(&"a".to_string()), Some(&"a".to_string()));
+        let filter = Criteria::new(Some("a"), Some("a"));
 
         // act
         let r = filter.allow(value);
@@ -132,7 +131,7 @@ mod tests {
     fn allow_entry_same_pattern_for_both_that_not_match_request_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(Some(&"b".to_string()), Some(&"b".to_string()));
+        let filter = Criteria::new(Some("b"), Some("b"));
 
         // act
         let r = filter.allow(value);
@@ -145,7 +144,7 @@ mod tests {
     fn allow_entry_different_patterns_for_both_that_match_only_include_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(Some(&"a".to_string()), Some(&"b".to_string()));
+        let filter = Criteria::new(Some("a"), Some("b"));
 
         // act
         let r = filter.allow(value);
@@ -158,7 +157,7 @@ mod tests {
     fn allow_entry_different_patterns_for_both_that_match_only_exclude_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(Some(&"b".to_string()), Some(&"a".to_string()));
+        let filter = Criteria::new(Some("b"), Some("a"));
 
         // act
         let r = filter.allow(value);
@@ -171,7 +170,7 @@ mod tests {
     fn allow_entry_different_patterns_for_both_that_not_match_any_pattern_test() {
         // arrange
         let value = "a";
-        let filter = Criteria::new(Some(&"b".to_string()), Some(&"c".to_string()));
+        let filter = Criteria::new(Some("b"), Some("c"));
 
         // act
         let r = filter.allow(value);
