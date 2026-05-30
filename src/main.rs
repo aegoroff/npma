@@ -87,10 +87,9 @@ fn handle_traffic(converted: &[LogEntry]) {
 
 fn handle_group(cmd: &ArgMatches, converted: &[LogEntry]) {
     let limit = cmd.get_one::<usize>("top");
-    let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) else {
-        return;
-    };
-    group_by(*param, limit, converted, |e| param.extract(e).into_owned());
+    if let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) {
+        group_by(*param, limit, converted, |e| param.extract(e).into_owned());
+    }
 }
 
 fn group_by<T, F>(parameter: LogParameter, limit: Option<&usize>, data: &[LogEntry], f: F)
