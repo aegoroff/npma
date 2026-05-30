@@ -4,7 +4,7 @@ use clap::ValueEnum;
 use clap::builder::PossibleValue;
 
 use core::hash::Hash;
-use std::collections::HashMap;
+use std::borrow::Cow;
 use std::fmt::Display;
 
 use filter::Criteria;
@@ -63,19 +63,6 @@ pub async fn convert<S: Stream<Item = String>>(
     result
 }
 
-fn hash<'a, I>(strings: I) -> HashMap<&'a str, &'a str>
-where
-    I: Iterator<Item = &'a String>,
-{
-    strings
-        .filter_map(|s| {
-            let sep_ix = s.find(VALUE_SEPARATOR)?;
-            Some((&s[..sep_ix], &s[sep_ix..]))
-        })
-        .map(|(k, v)| (k.trim(), v.trim_matches(TRIM_VALUE_PATTERN)))
-        .collect()
-}
-
 #[must_use]
 pub fn calculate_percent(value: i32, total: i32) -> f64 {
     if total == 0 {
@@ -108,14 +95,19 @@ impl LogEntry {
         if content.is_empty() {
             None
         } else {
-            let h = hash(content.iter());
-
-            let find = |p: &str| {
-                if let Some(v) = h.get(p) {
-                    (*v).to_string()
-                } else {
-                    String::new()
-                }
+            let find = |p: &str| -> String {
+                content
+                    .iter()
+                    .find_map(|s| {
+                        let sep_ix = s.find(VALUE_SEPARATOR)?;
+                        let key = s[..sep_ix].trim();
+                        if key == p {
+                            Some(s[sep_ix..].trim_matches(TRIM_VALUE_PATTERN).to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_default()
             };
 
             let request = find("request");
@@ -147,29 +139,7 @@ impl LogEntry {
     }
 
     fn allow(&self, filter: &Criteria, parameter: Option<LogParameter>) -> bool {
-        if let Some(parameter) = parameter {
-            match parameter {
-                LogParameter::Time => filter.allow(&self.timestamp.to_string()),
-                LogParameter::Date => {
-                    let s = format!(
-                        "{}-{:02}-{:02}",
-                        self.timestamp.year(),
-                        self.timestamp.month(),
-                        self.timestamp.day()
-                    );
-                    filter.allow(&s)
-                }
-                LogParameter::Agent => filter.allow(&self.agent),
-                LogParameter::ClientIp => filter.allow(&self.clientip),
-                LogParameter::Status => filter.allow(&self.status.to_string()),
-                LogParameter::Method => filter.allow(&self.method),
-                LogParameter::Schema => filter.allow(&self.schema),
-                LogParameter::Request => filter.allow(&self.request),
-                LogParameter::Referrer => filter.allow(&self.referrer),
-            }
-        } else {
-            true
-        }
+        parameter.is_none_or(|p| filter.allow(&p.extract(self)))
     }
 }
 
@@ -185,6 +155,27 @@ pub enum LogParameter {
     Request,
     Referrer,
     Date,
+}
+
+impl LogParameter {
+    pub fn extract<'a>(&self, entry: &'a LogEntry) -> std::borrow::Cow<'a, str> {
+        match self {
+            LogParameter::Agent => Cow::Borrowed(&entry.agent),
+            LogParameter::ClientIp => Cow::Borrowed(&entry.clientip),
+            LogParameter::Method => Cow::Borrowed(&entry.method),
+            LogParameter::Schema => Cow::Borrowed(&entry.schema),
+            LogParameter::Request => Cow::Borrowed(&entry.request),
+            LogParameter::Referrer => Cow::Borrowed(&entry.referrer),
+            LogParameter::Status => Cow::Owned(entry.status.to_string()),
+            LogParameter::Time => Cow::Owned(entry.timestamp.to_string()),
+            LogParameter::Date => Cow::Owned(format!(
+                "{}-{:02}-{:02}",
+                entry.timestamp.year(),
+                entry.timestamp.month(),
+                entry.timestamp.day()
+            )),
+        }
+    }
 }
 
 #[derive(Default, Debug)]
