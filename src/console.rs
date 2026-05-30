@@ -50,8 +50,6 @@ pub async fn print(data: impl Stream<Item = LogEntry>) {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_possible_wrap)]
 pub fn print_grouped<T: Display + Hash + Eq>(
     parameter: LogParameter,
     data: impl Iterator<Item = GroupedParameter<T>>,
