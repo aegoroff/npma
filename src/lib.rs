@@ -7,8 +7,8 @@ use core::hash::Hash;
 use std::borrow::Cow;
 use std::fmt::Display;
 
+use async_stream::stream;
 use filter::Criteria;
-
 use tokio_stream::{Stream, StreamExt};
 
 pub mod console;
@@ -21,46 +21,75 @@ pub use io::read_strings_from_stdin;
 const VALUE_SEPARATOR: char = ':';
 const TRIM_VALUE_PATTERN: &[char] = &[VALUE_SEPARATOR, ' '];
 
-/// Converts a stream of strings into a vector of `LogEntry` instances, applying filtering and parameterization.
+struct EntryParser {
+    buffer: Vec<String>,
+    line: u64,
+}
+
+impl EntryParser {
+    fn new() -> Self {
+        Self {
+            buffer: vec![],
+            line: 0,
+        }
+    }
+
+    fn push(&mut self, s: String) -> Option<LogEntry> {
+        if s.contains("pattern: NGINXPROXYACCESS") {
+            let entry = LogEntry::new(&self.buffer, self.line);
+            self.buffer.clear();
+            self.line += 1;
+            entry
+        } else if !s.ends_with(VALUE_SEPARATOR) {
+            self.buffer.push(s);
+            None
+        } else {
+            None
+        }
+    }
+
+    /// Last uncompleted entry
+    fn finish(&mut self) -> Option<LogEntry> {
+        if self.buffer.is_empty() {
+            None
+        } else {
+            LogEntry::new(&self.buffer, self.line)
+        }
+    }
+}
+
+/// Converts a stream of strings into stream of `LogEntry` instances, applying filtering and parameterization.
 ///
 /// This function takes in a stream of log entries, a filter criteria, and an optional `LogParameter`.
 /// It iterates through the stream, grouping lines together until it encounters a line that
 /// starts with "pattern: NGINXPROXYACCESS".
 /// When such a line is encountered, it adds the accumulated log entry to the result vector and resets the accumulator.
 ///
-/// Finally, after processing all lines, it adds any remaining accumulated log entry to the result vector.
-#[must_use]
-pub async fn convert<S: Stream<Item = String>>(
-    entries: S,
-    filter: &Criteria,
+/// Finally, after processing all lines, it adds any remaining accumulated log entry to the result stream.
+pub fn convert<'a, S>(
+    input: S,
+    filter: &'a Criteria,
     parameter: Option<LogParameter>,
-) -> Vec<LogEntry> {
-    let mut content = vec![];
-    let mut line: u64 = 0;
+) -> impl Stream<Item = LogEntry> + 'a
+where
+    S: Stream<Item = String> + 'a,
+{
+    stream! {
+        let mut parser = EntryParser::new();
+        let mut pinned = std::pin::pin!(input);
 
-    let add_entry = |v: &mut Vec<LogEntry>, entry: Option<LogEntry>| {
-        if let Some(entry) = entry
-            && entry.allow(filter, parameter)
-        {
-            v.push(entry);
+        while let Some(line) = pinned.next().await {
+            if let Some(entry) = parser.push(line)
+                && entry.allow(filter, parameter) {
+                    yield entry;
+                }
         }
-    };
-
-    let mut result = entries
-        .fold(vec![], |mut v, s| {
-            if s.contains("pattern: NGINXPROXYACCESS") {
-                add_entry(&mut v, LogEntry::new(&content, line));
-                content.clear();
-                line += 1;
-            } else if !s.ends_with(VALUE_SEPARATOR) {
-                content.push(s);
+        // Last entry
+        if let Some(entry) = parser.finish()
+            && entry.allow(filter, parameter) {
+                yield entry;
             }
-            v
-        })
-        .await;
-    // Last line
-    add_entry(&mut result, LogEntry::new(&content, line));
-    result
+    }
 }
 
 #[must_use]

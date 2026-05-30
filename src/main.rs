@@ -16,7 +16,7 @@ use npma::{
 };
 use std::pin::pin;
 use std::{fmt::Display, io};
-use tokio_stream::{self, Stream};
+use tokio_stream::{self, Stream, StreamExt};
 
 #[cfg(target_os = "linux")]
 use mimalloc::MiMalloc;
@@ -67,28 +67,33 @@ async fn scan_stdin(cmd: &ArgMatches) -> Result<()> {
 
 async fn scan(entries: impl Stream<Item = String> + Unpin, cmd: &ArgMatches) -> Result<()> {
     let config = configure_scan(cmd);
-    let converted = convert(entries, &config.filter, config.parameter).await;
-    print_converted(cmd, converted);
+    let stream = convert(entries, &config.filter, config.parameter);
+    let stream = pin!(stream);
+    print_converted(cmd, stream).await;
     Ok(())
 }
 
-fn print_converted(cmd: &ArgMatches, converted: Vec<LogEntry>) {
+async fn print_converted(cmd: &ArgMatches, entries: impl Stream<Item = LogEntry> + Unpin) {
     match cmd.subcommand() {
-        Some(("g", cmd)) => handle_group(cmd, &converted),
-        Some(("t", _)) => handle_traffic(&converted),
-        _ => console::print(converted.into_iter()),
+        Some(("g", cmd)) => handle_group(cmd, entries).await,
+        Some(("t", _)) => handle_traffic(entries).await,
+        _ => console::print(entries).await,
     }
 }
 
-fn handle_traffic(converted: &[LogEntry]) {
-    let total_bytes: u64 = converted.iter().map(|x| x.length).sum();
+async fn handle_traffic(mut entries: impl Stream<Item = LogEntry> + Unpin) {
+    let mut total_bytes: u64 = 0;
+    while let Some(e) = entries.next().await {
+        total_bytes += e.length;
+    }
     println!("Total traffic: {}", HumanBytes(total_bytes));
 }
 
-fn handle_group(cmd: &ArgMatches, converted: &[LogEntry]) {
+async fn handle_group(cmd: &ArgMatches, stream: impl Stream<Item = LogEntry> + Unpin) {
+    let collected: Vec<LogEntry> = stream.collect().await;
     let limit = cmd.get_one::<usize>("top");
     if let Some(param) = cmd.get_one::<LogParameter>(FILTER_PARAMETER_ARG) {
-        group_by(*param, limit, converted, |e| param.extract(e).into_owned());
+        group_by(*param, limit, &collected, |e| param.extract(e).into_owned());
     }
 }
 

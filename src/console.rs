@@ -3,11 +3,15 @@ use comfy_table::{Attribute, Cell, ContentArrangement, Table};
 use core::hash::Hash;
 use itertools::Itertools;
 use std::fmt::Display;
+use std::pin::pin;
+use tokio_stream::Stream;
+use tokio_stream::StreamExt;
 
 use crate::{GroupedParameter, LogEntry, LogParameter, calculate_percent};
 
 /// Prints results table
-pub fn print(data: impl Iterator<Item = LogEntry>) {
+pub async fn print(data: impl Stream<Item = LogEntry>) {
+    let mut data = pin!(data);
     let mut table = Table::new();
     table
         .load_preset(UTF8_HORIZONTAL_ONLY)
@@ -25,8 +29,9 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
         ])
         .set_content_arrangement(ContentArrangement::Dynamic);
 
-    let rows = data.map(|entry| {
-        [
+    let mut total = 0u64;
+    while let Some(entry) = data.next().await {
+        table.add_row([
             Cell::new(entry.line),
             Cell::new(entry.timestamp),
             Cell::new(entry.agent),
@@ -37,10 +42,9 @@ pub fn print(data: impl Iterator<Item = LogEntry>) {
             Cell::new(entry.length),
             Cell::new(entry.request),
             Cell::new(entry.referrer),
-        ]
-    });
-    table.add_rows(rows);
-    let total = table.row_count();
+        ]);
+        total += 1;
+    }
     if total > 0 {
         println!("{table}");
         println!("Total data: {total}");
