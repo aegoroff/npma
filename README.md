@@ -1,25 +1,25 @@
+# Nginx Proxy Manager Access Log Analyzer
+
 [![Lines of Code](https://tokei.rs/b1/github/aegoroff/npma?category=code)](https://github.com/XAMPPRocky/tokei)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-# Nginx Proxy Manager Access Log Analyzer
-
-A powerful command-line tool for analyzing Nginx Proxy Manager access logs. This tool processes the output from the [grok](https://github.com/aegoroff/grok) tool, which parses raw Nginx Proxy Manager access logs and extracts all properties of each log entry.
+A powerful command-line tool for analyzing Nginx Proxy Manager access logs. This tool processes JSON-formatted log entries (typically from the [grok](https://github.com/aegoroff/grok) tool) and provides detailed statistics, filtering, and grouping capabilities.
 
 ## Features
 
-- Analyze access logs with detailed statistics
-- Filter logs by various parameters (time, date, agent, client IP, status, method, etc.)
-- Group and count entries by different parameters
-- Calculate percentages and statistics
-- Interactive console output with progress indicators
-- Support for both file and stdin input
+- **Real-time analysis** - Process logs from stdin or analyze existing files
+- **Advanced filtering** - Filter by time, date, user agent, client IP, status code, HTTP method, and more
+- **Grouping and statistics** - Group log entries by any parameter with top-N support
+- **Traffic calculation** - Calculate total data size transferred through proxy
+- **Interactive console output** - Progress indicators and formatted tables
+- **Shell completions** - Built-in support for bash, zsh, fish, and powershell
 
 ## Installation
 
 ### Prerequisites
 
 - Rust toolchain (stable or nightly)
-- [grok](https://github.com/aegoroff/grok) tool for log parsing
+- [grok](https://github.com/aegoroff/grok) tool for log parsing (optional, for stdin mode)
 
 ### From Source
 
@@ -34,6 +34,22 @@ cd npma
 cargo install --path .
 ```
 
+### Generate Shell Completions
+
+```shell
+# Bash
+npma completion bash > ~/.bash_completion
+
+# Zsh
+npma completion zsh > ~/.zshrc
+
+# Fish
+npma completion fish > ~/.config/fish/completions/npma.fish
+
+# PowerShell
+npma completion powershell > $PROFILE
+```
+
 ## Usage
 
 ### Basic Usage
@@ -41,49 +57,108 @@ cargo install --path .
 The most common usage pattern is to pipe the output from grok into npma:
 
 ```shell
+# Analyze logs from stdin (piped from grok)
 grok file -j -m NGINXPROXYACCESS ~/access.log | npma i
-```
 
-### Command Line Options
-
-```
-npma [OPTIONS] [COMMAND]
-
-Commands:
-  i, interactive  Interactive mode
-  h, help        Print help
-  V, version     Print version
-
-Options:
-  -f, --file <FILE>    Input file path
-  -p, --param <PARAM>  Parameter to analyze [possible values: time, date, agent, client, status, method, schema, req, ref]
-  -i, --include <INCLUDE>  Include pattern
-  -e, --exclude <EXCLUDE>  Exclude pattern
-  -h, --help           Print help
-  -V, --version        Print version
-```
-
-### Examples
-
-1. Analyze logs from a file:
-```shell
+# Analyze logs from a file directly
 npma f access.log
 ```
 
-2. Filter by specific parameter:
+### Commands
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `f` | `file` | Analyze log file |
+| `i` | `stdin` | Analyze data from standard input |
+| `completion` | - | Generate shell completion script |
+
+### Subcommands
+
+Both `f` and `i` commands support the following subcommands:
+
+| Subcommand | Aliases | Description |
+|------------|---------|-------------|
+| `g` | `group` | Group log entries by parameter |
+| `t` | `traffic` | Calculate total traffic size |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-p, --parameter <PARAM>` | Filter parameter [possible values: `time`, `date`, `agent`, `client`, `status`, `method`, `schema`, `req`, `ref`] |
+| `-i, --include <PATTERN>` | Include only entries matching this pattern (requires `-p`) |
+| `-e, --exclude <PATTERN>` | Exclude entries matching this pattern (requires `-p`) |
+
+### Examples
+
+#### 1. Basic Analysis
+
 ```shell
-grok file -j -m NGINXPROXYACCESS access.log | npma i -p status
+# From file
+npma f access.log
+
+# From stdin
+grok file -j -m NGINXPROXYACCESS access.log | npma i
 ```
 
-3. Include only specific patterns:
+#### 2. Filter by Status Code
+
 ```shell
-grok file -j -m NGINXPROXYACCESS access.log | npma i -i "200" -p status
+# Show only successful requests (200)
+npma f access.log -p status -i "200"
+
+# Exclude 404 errors
+npma f access.log -p status -e "404"
 ```
 
-4. Exclude specific patterns:
+#### 3. Group by Parameter
+
 ```shell
-grok file -j -m NGINXPROXYACCESS access.log | npma i -e "404" -p status
+# Top 10 clients by request count
+npma f access.log g client -t 10
+
+# Group by HTTP method
+npma i -p method < logs.json g method
+
+# Group by date
+npma f access.log g date
 ```
+
+#### 4. Calculate Traffic
+
+```shell
+# Total traffic from file
+npma f access.log t
+
+# Total traffic from stdin
+grok file -j -m NGINXPROXYACCESS access.log | npma i t
+```
+
+#### 5. Combined Usage
+
+```shell
+# Analyze only POST requests, grouped by client
+npma f access.log -p method -i "POST" g client -t 5
+
+# Exclude specific user agents and group by status
+npma i -p agent -e "curl" g status
+```
+
+## Log Entry Parameters
+
+The following parameters can be used for filtering and grouping:
+
+| Parameter | Description |
+|-----------|-------------|
+| `time` | Request timestamp |
+| `date` | Request date |
+| `agent` | User agent string |
+| `client` | Client IP address |
+| `status` | HTTP status code |
+| `method` | HTTP method (GET, POST, etc.) |
+| `schema` | Request scheme (http/https) |
+| `req` | Request path |
+| `ref` | Referrer URL |
 
 ## Contributing
 
