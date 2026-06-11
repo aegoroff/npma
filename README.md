@@ -41,7 +41,7 @@ cargo install --path .
 The most common usage pattern is to pipe the output from grok into npma:
 
 ```shell
-grok -i -m NGINXPROXYACCESS -f ~/access.log | npma i
+grok file -j -m NGINXPROXYACCESS ~/access.log | npma i
 ```
 
 ### Command Line Options
