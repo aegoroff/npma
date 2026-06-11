@@ -86,7 +86,7 @@ where
             }
 
             if let Ok(jsonl_entry) = serde_json::from_str::<JsonlEntry>(&line) {
-                let entry = LogEntry::from_jsonl(&jsonl_entry);
+                let entry = LogEntry::from_jsonl(jsonl_entry);
                 if entry.allow(filter, parameter) {
                     yield entry;
                 }
@@ -122,8 +122,8 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
-    fn from_jsonl(entry: &JsonlEntry) -> Self {
-        let props = &entry.properties;
+    fn from_jsonl(entry: JsonlEntry) -> Self {
+        let props = entry.properties;
 
         let timestamp =
             DateTime::parse_from_str(&props.timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
@@ -136,15 +136,15 @@ impl LogEntry {
 
         Self {
             agent,
-            clientip: props.clientip.clone(),
-            gzip: props.gzip.clone(),
-            host: props.host.clone(),
+            clientip: props.clientip,
+            gzip: props.gzip,
+            host: props.host,
             length,
-            method: props.method.clone(),
-            request: props.request.clone(),
-            referrer: props.referrer.clone(),
-            schema: props.schema.clone(),
-            serverhost: props.serverhost.clone(),
+            method: props.method,
+            request: props.request,
+            referrer: props.referrer,
+            schema: props.schema,
+            serverhost: props.serverhost,
             status,
             timestamp,
             line: entry.line,

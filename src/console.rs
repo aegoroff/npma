@@ -77,25 +77,27 @@ pub fn print_grouped<T: Display + Hash + Eq>(
         ])
         .set_content_arrangement(ContentArrangement::Dynamic);
 
-    let mut total_count = 0u64;
-
     let mut data: Vec<_> = data.collect();
     data.sort_unstable_by(|a, b| Ord::cmp(&b.count, &a.count));
-    data.into_iter()
-        .take(*limit.unwrap_or(&usize::MAX))
-        .for_each(|entry| {
-            total_count += entry.count;
-            table.add_row([Cell::new(entry.parameter), Cell::new(entry.count)]);
-        });
 
-    for r in table.row_iter_mut() {
-        if let Some(c) = r.cell_iter().nth(1)
-            && let Ok(count) = c.content().parse()
-        {
-            let percent = calculate_percent(count, total_count);
-            r.add_cell(Cell::new(format!("{percent:.2}%")));
-        }
+    let limited: Vec<_> = data
+        .into_iter()
+        .take(*limit.unwrap_or(&usize::MAX))
+        .collect();
+
+    let total_count: u64 = limited.iter().map(|e| e.count).sum();
+
+    for entry in limited {
+        table.add_row([
+            Cell::new(entry.parameter),
+            Cell::new(entry.count),
+            Cell::new(format!(
+                "{:.2}%",
+                calculate_percent(entry.count, total_count)
+            )),
+        ]);
     }
+
     let total = table.row_count();
     if total > 0 {
         println!("{table}");
