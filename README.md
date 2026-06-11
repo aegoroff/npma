@@ -67,22 +67,22 @@ Options:
 
 1. Analyze logs from a file:
 ```shell
-npma -f access.log
+npma f access.log
 ```
 
 2. Filter by specific parameter:
 ```shell
-grok -i -m NGINXPROXYACCESS -f access.log | npma -p status
+grok file -j -m NGINXPROXYACCESS access.log | npma i -p status
 ```
 
 3. Include only specific patterns:
 ```shell
-grok -i -m NGINXPROXYACCESS -f access.log | npma -i "200" -p status
+grok file -j -m NGINXPROXYACCESS access.log | npma i -i "200" -p status
 ```
 
 4. Exclude specific patterns:
 ```shell
-grok -i -m NGINXPROXYACCESS -f access.log | npma -e "404" -p status
+grok file -j -m NGINXPROXYACCESS access.log | npma i -e "404" -p status
 ```
 
 ## Contributing
