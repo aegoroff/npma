@@ -12,7 +12,7 @@ edition = "2024"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-tokio-stream =  { version = "0.1.18", features = ["io-util"] }
+tokio-stream = { version = "0.1.18", features = ["io-util"] }
 async-stream = "0.3"
 clap = { version = "4.6.1", features = ["std", "color", "suggestions", "cargo"] }
 clap_complete = "4.6.5"
@@ -21,6 +21,8 @@ comfy-table = "7.2.2"
 color-eyre = "0.6.5"
 indicatif = "0.18.4"
 chrono = { version="0.4.44", default-features = false }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 mimalloc = "0.1.52"

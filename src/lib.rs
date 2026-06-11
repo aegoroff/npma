@@ -18,65 +18,57 @@ mod io;
 pub use io::read_strings_from_file;
 pub use io::read_strings_from_stdin;
 
-const VALUE_SEPARATOR: char = ':';
-const TRIM_VALUE_PATTERN: &[char] = &[VALUE_SEPARATOR, ' '];
-
-struct EntryParser {
-    current: LogEntry,
+/// JSONL log entry structure matching the input format
+#[derive(serde::Deserialize, Debug)]
+#[allow(dead_code)]
+struct JsonlEntry {
     line: u64,
-    started: bool,
+    matched: bool,
+    pattern: String,
+    properties: JsonlProperties,
 }
 
-impl EntryParser {
-    fn new() -> Self {
-        Self {
-            current: LogEntry {
-                line: 0,
-                ..Default::default()
-            },
-            line: 0,
-            started: false,
-        }
-    }
-
-    fn push(&mut self, s: &str) -> Option<LogEntry> {
-        if s.contains("pattern: NGINXPROXYACCESS") {
-            let prev_started = self.started;
-            self.started = true;
-            self.line += 1;
-            let entry = std::mem::replace(
-                &mut self.current,
-                LogEntry {
-                    line: self.line,
-                    ..Default::default()
-                },
-            );
-            if prev_started { Some(entry) } else { None }
-        } else if !s.ends_with(VALUE_SEPARATOR) {
-            self.current.apply_line(s);
-            None
-        } else {
-            None
-        }
-    }
-
-    fn finish(self) -> Option<LogEntry> {
-        if self.started && !self.current.request.is_empty() {
-            Some(self.current)
-        } else {
-            None
-        }
-    }
+/// Properties extracted from JSONL entry
+#[derive(serde::Deserialize, Debug, Default)]
+struct JsonlProperties {
+    #[serde(default)]
+    timestamp: String,
+    #[serde(default)]
+    clientip: String,
+    #[serde(default)]
+    schema: String,
+    #[serde(default)]
+    request: String,
+    #[serde(default)]
+    status: String,
+    #[serde(default)]
+    method: String,
+    #[serde(default)]
+    referrer: String,
+    #[serde(default)]
+    host: String,
+    #[serde(default)]
+    agent: String,
+    #[serde(default)]
+    gzip: String,
+    #[serde(default)]
+    serverhost: String,
+    #[serde(default)]
+    length: String,
 }
 
-/// Converts a stream of strings into stream of `LogEntry` instances, applying filtering and parameterization.
+/// Converts a stream of JSONL strings into stream of `LogEntry` instances, applying filtering and parameterization.
 ///
-/// This function takes in a stream of log entries, a filter criteria, and an optional `LogParameter`.
-/// It iterates through the stream, grouping lines together until it encounters a line that
-/// starts with "pattern: NGINXPROXYACCESS".
-/// When such a line is encountered, it adds the accumulated log entry to the result vector and resets the accumulator.
+/// Each input line is expected to be a valid JSON object with the following structure:
+/// {
+///   "line": <number>,
+///   "matched": <boolean>,
+///   "pattern": <string>,
+///   "text": <string>,
+///   "properties": { ... }
+/// }
 ///
-/// Finally, after processing all lines, it adds any remaining accumulated log entry to the result stream.
+/// The `properties` object contains the actual log data fields.
 pub fn convert<'a, S>(
     input: S,
     filter: &'a Criteria,
@@ -86,20 +78,20 @@ where
     S: Stream<Item = String> + 'a,
 {
     stream! {
-        let mut parser = EntryParser::new();
         let mut pinned = std::pin::pin!(input);
 
         while let Some(line) = pinned.next().await {
-            if let Some(entry) = parser.push(&line)
-                && entry.allow(filter, parameter) {
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            if let Ok(jsonl_entry) = serde_json::from_str::<JsonlEntry>(&line) {
+                let entry = LogEntry::from_jsonl(&jsonl_entry);
+                if entry.allow(filter, parameter) {
                     yield entry;
                 }
-        }
-        // Last entry
-        if let Some(entry) = parser.finish()
-            && entry.allow(filter, parameter) {
-                yield entry;
             }
+        }
     }
 }
 
@@ -130,26 +122,32 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
-    fn apply_line(&mut self, s: &str) {
-        let Some(sep_ix) = s.find(VALUE_SEPARATOR) else {
-            return;
-        };
-        let key = s[..sep_ix].trim();
-        let value = s[sep_ix..].trim_matches(TRIM_VALUE_PATTERN);
-        match key {
-            "request" => self.request = value.to_string(),
-            "timestamp" => {
-                self.timestamp =
-                    DateTime::parse_from_str(value, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
-            }
-            "agent" => self.agent = value.trim_matches('"').to_string(),
-            "clientip" => self.clientip = value.to_string(),
-            "method" => self.method = value.to_string(),
-            "schema" => self.schema = value.to_string(),
-            "length" => self.length = value.parse().unwrap_or_default(),
-            "status" => self.status = value.parse().unwrap_or_default(),
-            "referrer" => self.referrer = value.to_string(),
-            _ => {}
+    fn from_jsonl(entry: &JsonlEntry) -> Self {
+        let props = &entry.properties;
+
+        let timestamp =
+            DateTime::parse_from_str(&props.timestamp, "%d/%b/%Y:%H:%M:%S %z").unwrap_or_default();
+
+        let length = props.length.parse().unwrap_or_default();
+        let status = props.status.parse().unwrap_or_default();
+
+        // Remove surrounding quotes from agent if present
+        let agent = props.agent.trim_matches('"').to_string();
+
+        Self {
+            agent,
+            clientip: props.clientip.clone(),
+            gzip: props.gzip.clone(),
+            host: props.host.clone(),
+            length,
+            method: props.method.clone(),
+            request: props.request.clone(),
+            referrer: props.referrer.clone(),
+            schema: props.schema.clone(),
+            serverhost: props.serverhost.clone(),
+            status,
+            timestamp,
+            line: entry.line,
         }
     }
 
