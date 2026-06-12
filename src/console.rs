@@ -30,12 +30,20 @@ pub async fn print(data: impl Stream<Item = LogEntry>) {
 
     let mut total = 0u64;
     while let Some(entry) = data.next().await {
+        let status = if entry.status >= 400 {
+            Cell::new(entry.status).fg(comfy_table::Color::DarkRed)
+        } else if entry.status >= 300 && entry.status < 400 {
+            Cell::new(entry.status).fg(comfy_table::Color::DarkYellow)
+        } else {
+            Cell::new(entry.status).fg(comfy_table::Color::DarkGreen)
+        };
+
         table.add_row([
             Cell::new(entry.line),
             Cell::new(entry.timestamp),
             Cell::new(entry.agent),
             Cell::new(entry.clientip),
-            Cell::new(entry.status),
+            status,
             Cell::new(entry.method),
             Cell::new(entry.schema),
             Cell::new(entry.length),
