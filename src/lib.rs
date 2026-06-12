@@ -96,6 +96,7 @@ where
 }
 
 #[must_use]
+#[allow(clippy::cast_precision_loss)]
 pub fn calculate_percent(value: u64, total: u64) -> f64 {
     if total == 0 {
         0_f64
