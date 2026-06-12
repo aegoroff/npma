@@ -1,6 +1,5 @@
 # Nginx Proxy Manager Access Log Analyzer
 
-[![Lines of Code](https://tokei.rs/b1/github/aegoroff/npma?category=code)](https://github.com/XAMPPRocky/tokei)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A powerful command-line tool for analyzing Nginx Proxy Manager access logs. This tool processes JSON-formatted log entries (typically from the [grok](https://github.com/aegoroff/grok) tool) and provides detailed statistics, filtering, and grouping capabilities.
