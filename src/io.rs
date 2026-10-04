@@ -9,6 +9,9 @@ use tokio_stream::wrappers::LinesStream;
 
 use tokio_stream::{Stream, StreamExt};
 
+/// Large buffer reduces the number of reads tokio dispatches to its blocking thread pool
+const READ_BUFFER_SIZE: usize = 1 << 20;
+
 /// Reads strings from file specified using `path`.
 ///
 /// # Errors
@@ -38,7 +41,7 @@ fn read_strings_from<R>(
 where
     R: AsyncRead + Unpin,
 {
-    let lines = BufReader::new(reader).lines();
+    let lines = BufReader::with_capacity(READ_BUFFER_SIZE, reader).lines();
     let stream = LinesStream::new(lines);
     stream.filter_map(Result::ok).filter(filter)
 }
