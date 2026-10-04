@@ -18,43 +18,46 @@ mod io;
 pub use io::read_strings_from_file;
 pub use io::read_strings_from_stdin;
 
-/// JSONL log entry structure matching the input format
+/// JSONL log entry structure matching the input format.
+/// Strings are borrowed from the input line when possible (no escapes) to avoid allocations
 #[derive(serde::Deserialize, Debug)]
 #[allow(dead_code)]
-struct JsonlEntry {
+struct JsonlEntry<'a> {
     line: u64,
     matched: bool,
-    pattern: String,
-    properties: JsonlProperties,
+    #[serde(borrow)]
+    pattern: Cow<'a, str>,
+    #[serde(borrow)]
+    properties: JsonlProperties<'a>,
 }
 
 /// Properties extracted from JSONL entry
 #[derive(serde::Deserialize, Debug, Default)]
-struct JsonlProperties {
-    #[serde(default)]
-    timestamp: String,
-    #[serde(default)]
-    clientip: String,
-    #[serde(default)]
-    schema: String,
-    #[serde(default)]
-    request: String,
-    #[serde(default)]
-    status: String,
-    #[serde(default)]
-    method: String,
-    #[serde(default)]
-    referrer: String,
-    #[serde(default)]
-    host: String,
-    #[serde(default)]
-    agent: String,
-    #[serde(default)]
-    gzip: String,
-    #[serde(default)]
-    serverhost: String,
-    #[serde(default)]
-    length: String,
+struct JsonlProperties<'a> {
+    #[serde(default, borrow)]
+    timestamp: Cow<'a, str>,
+    #[serde(default, borrow)]
+    clientip: Cow<'a, str>,
+    #[serde(default, borrow)]
+    schema: Cow<'a, str>,
+    #[serde(default, borrow)]
+    request: Cow<'a, str>,
+    #[serde(default, borrow)]
+    status: Cow<'a, str>,
+    #[serde(default, borrow)]
+    method: Cow<'a, str>,
+    #[serde(default, borrow)]
+    referrer: Cow<'a, str>,
+    #[serde(default, borrow)]
+    host: Cow<'a, str>,
+    #[serde(default, borrow)]
+    agent: Cow<'a, str>,
+    #[serde(default, borrow)]
+    gzip: Cow<'a, str>,
+    #[serde(default, borrow)]
+    serverhost: Cow<'a, str>,
+    #[serde(default, borrow)]
+    length: Cow<'a, str>,
 }
 
 /// Converts a stream of JSONL strings into stream of `LogEntry` instances, applying filtering and parameterization.
@@ -81,10 +84,6 @@ where
         let mut pinned = std::pin::pin!(input);
 
         while let Some(line) = pinned.next().await {
-            if line.trim().is_empty() {
-                continue;
-            }
-
             if let Ok(jsonl_entry) = serde_json::from_str::<JsonlEntry>(&line) {
                 let entry = LogEntry::from_jsonl(jsonl_entry);
                 if entry.allow(filter, parameter) {
@@ -123,7 +122,7 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
-    fn from_jsonl(entry: JsonlEntry) -> Self {
+    fn from_jsonl(entry: JsonlEntry<'_>) -> Self {
         let props = entry.properties;
 
         let timestamp =
@@ -132,20 +131,19 @@ impl LogEntry {
         let length = props.length.parse().unwrap_or_default();
         let status = props.status.parse().unwrap_or_default();
 
-        // Remove surrounding quotes from agent if present
-        let agent = props.agent.trim_matches('"').to_string();
+        let agent = trim_quotes(props.agent);
 
         Self {
             agent,
-            clientip: props.clientip,
-            gzip: props.gzip,
-            host: props.host,
+            clientip: props.clientip.into_owned(),
+            gzip: props.gzip.into_owned(),
+            host: props.host.into_owned(),
             length,
-            method: props.method,
-            request: props.request,
-            referrer: props.referrer,
-            schema: props.schema,
-            serverhost: props.serverhost,
+            method: props.method.into_owned(),
+            request: props.request.into_owned(),
+            referrer: props.referrer.into_owned(),
+            schema: props.schema.into_owned(),
+            serverhost: props.serverhost.into_owned(),
             status,
             timestamp,
             line: entry.line,
@@ -154,6 +152,21 @@ impl LogEntry {
 
     fn allow(&self, filter: &Criteria, parameter: Option<LogParameter>) -> bool {
         parameter.is_none_or(|p| filter.allow(&p.extract(self)))
+    }
+}
+
+/// Removes surrounding quotes. Agent usually contains escaped quotes, so it is already
+/// an owned string after deserialization and can be trimmed in place without reallocation
+fn trim_quotes(value: Cow<'_, str>) -> String {
+    match value {
+        Cow::Borrowed(s) => s.trim_matches('"').to_owned(),
+        Cow::Owned(mut s) => {
+            let end = s.trim_end_matches('"').len();
+            s.truncate(end);
+            let start = s.len() - s.trim_start_matches('"').len();
+            s.drain(..start);
+            s
+        }
     }
 }
 
@@ -244,6 +257,23 @@ mod tests {
     use test_case::test_case;
 
     use super::*;
+
+    #[test_case("\"a b\"", "a b")]
+    #[test_case("a b", "a b")]
+    #[test_case("\"\"", "")]
+    #[test_case("\"a", "a")]
+    #[test_case("", "")]
+    fn trim_quotes_tests(value: &str, expected: &str) {
+        // Arrange
+
+        // Act
+        let borrowed = trim_quotes(Cow::Borrowed(value));
+        let owned = trim_quotes(Cow::Owned(value.to_owned()));
+
+        // Assert
+        assert_eq!(borrowed, expected);
+        assert_eq!(owned, expected);
+    }
 
     #[test_case(1, 100, 1.0)]
     #[test_case(0, 100, 0.0)]
