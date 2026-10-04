@@ -13,7 +13,7 @@ pub async fn print(data: impl Stream<Item = LogEntry>) {
     let mut data = pin!(data);
     let mut table = Table::new();
     table
-        .load_preset(UTF8_HORIZONTAL_ONLY)
+        .load_style(UTF8_HORIZONTAL_ONLY)
         .set_header([
             Cell::new("#").add_attribute(Attribute::Bold),
             Cell::new("Time").add_attribute(Attribute::Bold),
@@ -77,7 +77,7 @@ pub fn print_grouped<T: Display + Hash + Eq>(
 
     let mut table = Table::new();
     table
-        .load_preset(UTF8_HORIZONTAL_ONLY)
+        .load_style(UTF8_HORIZONTAL_ONLY)
         .set_header([
             Cell::new(parameter_name).add_attribute(Attribute::Bold),
             Cell::new("Count").add_attribute(Attribute::Bold),
